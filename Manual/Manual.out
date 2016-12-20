@@ -1,0 +1,14 @@
+\BOOKMARK [1][-]{section.1}{Overview}{}% 1
+\BOOKMARK [1][-]{section.2}{Installation Instruction}{}% 2
+\BOOKMARK [1][-]{section.3}{Main Function}{}% 3
+\BOOKMARK [2][-]{subsection.3.1}{Input Arguments}{section.3}% 4
+\BOOKMARK [2][-]{subsection.3.2}{Output arguments}{section.3}% 5
+\BOOKMARK [1][-]{section.4}{GPOPS-II}{}% 6
+\BOOKMARK [2][-]{subsection.4.1}{Setup}{section.4}% 7
+\BOOKMARK [2][-]{subsection.4.2}{Output}{section.4}% 8
+\BOOKMARK [1][-]{section.5}{Muscle model}{}% 9
+\BOOKMARK [1][-]{section.6}{Examples}{}% 10
+\BOOKMARK [2][-]{subsection.6.1}{Walking example De Groote et al. 2016}{section.6}% 11
+\BOOKMARK [2][-]{subsection.6.2}{Running example De Groote et al. 2016}{section.6}% 12
+\BOOKMARK [2][-]{subsection.6.3}{OpenSim installation example Gait10dof18m}{section.6}% 13
+\BOOKMARK [2][-]{subsection.6.4}{OpenSim installation example Gait23dof54m}{section.6}% 14

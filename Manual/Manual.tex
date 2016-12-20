@@ -1,0 +1,316 @@
+\documentclass[a4paper,oneside,11pt]{article} 
+
+\usepackage[english]{babel}								
+\usepackage{fancyhdr}											% Custom headers and footers
+\usepackage{anysize}											%\marginsize{left}{right}{top}{bottom}:
+%\usepackage[latin1]{inputenc} 							% Om trema's gewoon te kunnen typen
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{bm}
+\usepackage{pdflscape}										% om pagina te kunnen draaien, in pdf
+\usepackage{multirow}											% om cel in tabel te kunnen maken die meerdere rijen overspant
+\usepackage{caption}
+\usepackage[pdftex]{graphicx} %Om pdf als figuur te kunnen invoegen
+\usepackage{float} 	%om figuren naar plaats te dwingen met H
+\usepackage{booktabs}
+%\usepackage{ctable}
+\usepackage{graphics}
+\usepackage{epstopdf}
+\usepackage{tikz,pgfplots}	% om de matlab2tikz package te kunnen gebruiken
+\usepackage{pgfplots}				
+\usepackage{subfigure}			% voor subfiguren
+\usepackage{standalone}			% voor de minipages te kunnen gebruiken
+\usepackage{rotating}
+\usepackage{multirow}
+\usepackage{underscore}
+\usepackage{comment} 
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks,
+    linkcolor={black!50!black},
+    citecolor={blue!50!black},
+    urlcolor={blue!80!black}
+}
+%usepackage{cite}
+
+% mcode
+\usepackage[framed,numbered,autolinebreaks,useliterate]{mcode}
+
+\pgfplotsset{plot coordinates/math parser=false}
+\pgfplotsset{compat=newest}
+\newlength\figureheight 
+\newlength\figurewidth 
+\newcommand{\folder}{figures/}
+
+\graphicspath{{figures/}}
+\setlength\parindent{0pt} 								% niet meer inspringen paragraaf
+\bibliographystyle{plain}
+\captionsetup{belowskip=12pt,aboveskip=6pt} 
+\bibliographystyle{jneurophysiol} 
+%\makeindex
+\begin{document}
+
+\title{Manual SimTK optcntrlmuscle}
+\author{Antoine Falisse, Maarten Afschrift, Friedl De Groote}
+\date{08/24/2016} 
+\maketitle
+\tableofcontents
+
+\section{Overview}
+
+The provided MATLAB code solves the muscle redundancy problem using the direct collocation optimal control software GPOPS-II as described in \textit{De Groote F, Kinney AL, Rao AV, Fregly BJ. Evaluation of direct collocation optimal control problem formulations for solving the muscle redundancy problem. Annals of Biomedical Engineering (2016).} \url{http://link.springer.com/article/10.1007%2Fs10439-016-1591-9}.
+
+\section{Installation Instruction}
+
+Add the main folder and subfolder to your MATLAB path 
+\begin{lstlisting}
+addpath(genpath('C/......./SimTK_optcntrlmuscle'))).
+\end{lstlisting}
+
+Several software packages are needed to run the program
+\begin{itemize}
+	\item The OpenSim MATLAB interface is used to generate the inputs to the optimal control problem based on a scaled OpenSim model and the solution of inverse kinematics (providing the solution of inverse dynamics is optional). To this aim, install OpenSim and set up the OpenSim MATLAB interface (OpenSim: \url{https://simtk.org/frs/?group_id=91}, OpenSim API: \url{http://simtk-confluence.stanford.edu:8080/display/OpenSim/Scripting+with+Matlab}).
+	\item GPOPS-II is used to solve the optimal control problem using direct collocation (\url{http://www.gpops2.com/}). A one-time 30-day trial license is avaiable for all users who register.
+	\item Adigator is used for automatic differentiation (\url{https://sourceforge.net/projects/adigator/}).
+\end{itemize}
+
+\section{Main Function}
+
+SolveMuscleRedundancy is the main function of this program and is used to solve the muscle redundancy problem. There are two variants of this function:
+\begin{itemize}
+\item SolveMuscleRedundancy_FtildeState uses the normalized tendon force as a state
+\item SolveMuscleRedundancy_lMtildeState uses the normalized muscle fiber length as a state
+\end{itemize}
+
+
+\subsection{Input Arguments}
+
+
+\textbf{Required Input arguments for SolveMuscleRedundancy
+}\begin{enumerate}
+	\item \textbf{model_path}: directory and filename of the scaled OpenSim model (.osim). The code should work with any OpenSim model with valid muscle-tendon parameters for which OpenSim's Inverse Dynamics and Muscle Analysis Tools generate reliable results. Note that only the muscle-tendon parameters and not the muscle model specified in the osim-file are used (for details see Muscle model).
+	\item \textbf{IK_path}: directory and filename of the inverse kinematics solution (.mot file).
+	\item \textbf{ID_path}: directory and filename of the inverse dynamics solution  (.sto file). If left empty, the inverse dynamics solution will be computed from the external loads (see Optional input arguments).
+	\item \textbf{time}: 1 x 2 MATLAB array with the initial and final time of the analysis in seconds. Initial and final states influence the optimal controls over a period of about 50 ms at the beginning and end of the time interval over which the optimal control problem is solved. Since in practice the initial and final states are generally unknown, problems should be solved for a time interval containing five additional data points (considering a 100Hz sampling frequency) at the beginning and end of the motion cycle. Those additional data points should not be considered in further analyses. The user should thus not be surprised to observe unrealistically high muscle activation at the beginning of the motion (more details in companion paper).
+	
+	\item \textbf{OutPath}: directory where you want to store the results from the muscle analysis.
+	\item \textbf{Misc}: miscellaneous input arguments
+	\begin{itemize}
+		\item \textit{DofNames_Input}  is a cell array specifying for which degrees of freedom you want to solve the muscle redundancy problem. Typically the muscle redundancy problem is solved for one leg at a time (there are no muscles spanning both legs).
+		\item \textit{MuscleNames_Input} is a cell array that specifies the muscles to be included in when solving the muscle redundancy problem. All muscles that actuate (i.e. have a moment arm with respect to) the degrees of freedom specified in \textit{DofNames_Input} will be selected by default if this array is empty.
+%		\item \textit{Atendon}: Tendon stiffness for the selected muscles (in the same order as in MuscleNames Input). The default value 35 will be used when left empty.
+	\end{itemize}
+\end{enumerate}
+
+Optional input arguments
+\begin{enumerate}
+	\item \textbf{Misc}.\textit{Loads_path}: path to the external loads file (.xml). The program will use the OpenSim libraries to solve the inverse dynamics problem when the required input argument ID_path is empty and Misc.\textit{Loads_path} points to an external loads file.
+	\item \textbf{Misc}.\textit{ID_ResultsPath}: Path where the inverse dynamics results will be saved when the required input argument \textit{ID_path} is empty.
+	\item \textbf{Misc}.\textit{f_cutoff_ID}: Cutoff frequency for the butterworth recursive low pass filter applied to the inverse dynamics data (default is 6 Hz).
+	\item \textbf{Misc}.\textit{f_order_ID}: order of the butterworth recursive low pass filter applied to the inverse dynamics data (default is 6).
+	
+	\item \textbf{Misc}.\textit{f_cutoff_LMT}: cutoff frequency for butterworth recursive low pass filter applied to the muscle tendon lengths from the muscle analysis (default 6 Hz).
+	\item \textbf{Misc}.\textit{f_order_LMT}: order of the butterworth recursive low pass filter applied to the muscle tendon lengths from the muscle analysis (default 6).		
+	
+	\item \textbf{Misc}.\textit{f_cutoff_dM}: cutoff frequency for butterworth recursive low pass filter applied to the muscle moment arms from the muscle analysis (default 6 Hz).
+	\item \textbf{Misc}.\textit{f_order_dM}: order of the butterworth recursive low pass filter applied to the muscle moment arms from the muscle analysis (default 6).
+
+	\item \textbf{Misc}.\textit{f_cutoff_IK}: cutoff frequency for the butterworth recursive low pass filter applied to the inverse kinematics data (default is 6 Hz) when performing the muscle analysis to compute muscle-tendon lengths and moment arms.
+	\item \textbf{Misc}.\textit{f_order_IK}: order of the butterworth recursive low pass filter applied to the inverse kinematics data (default is 6).
+
+	\item \textbf{Misc}.\textit{Mesh_Frequency}: Number of mesh interval per second (default is 100, but a denser mesh might be required to obtain the desired accuracy especially for faster motions).
+
+\end{enumerate}
+
+\subsection{Output arguments}
+
+
+\begin{enumerate}
+	\item Time: time vector.
+	\item MExcitation: optimal muscle excitation (matrix dimension: number of collocation points x number of muscles).
+	\item MActivation: optimal muscle activation (matrix dimension: number of collocation points x number of muscles).
+	\item RActivation: activation of the reserve actuators (matrix dimension: number of collocation points x number of degrees of freedom).
+	\item TForcetilde: normalized tendon force (matrix dimension: number of collocation points x number of muscles).
+	\item TForce: tendon force (matrix dimension: number of collocation points x number of muscles).
+	\item lMtilde: normalized muscle fiber length (matrix dimension: number of collocation points x number of muscles).
+	\item lM:  muscle fiber length (matrix dimension: number of collocation points x number of muscles)	.
+	\item MuscleNames: cell array that contains the names of the selected muscles (matrix dimension: number of muscles).
+	\item OptInfo: output structure created by GPOPS-II.
+	\item DatStore: data structure with input information for the optimal control problem.
+\end{enumerate}
+
+\section{GPOPS-II}
+\subsection{Setup}
+
+The GPOPS-II setup is accessible through the function SolveMuscleRedundancy_$<state>$.m under GPOPS setup. The user is referred to the GPOPS-II user guide for setup options. A higher accuracy can be reached by adjusting, for instance, the number of mesh intervals. This however comes at the expense of the computational time. 100 mesh intervals per second are used by default.
+
+\subsection{Output}
+
+The GPOPS-II output, OptInfo, contains all information related to the optimal control problem solution. Convergence to an optimal solution is reached when output.result.nlpinfo is flagged 0 ("EXIT: Optimal solution found" in the command window of MATLAB). The mesh accuracy can be assessed with output.result.maxerrors. Cost functional, control, state (and costate) can be accessed in output.result.solution.phase. \\
+
+To recall, the user should consider extending the time interval by 50 ms at the beginning and end of the motion to limit the influence of the unknown initial and final state on the solution. Results from those additional periods should not be considered realistic and will typically result in high muscle activation.
+
+\section{Muscle model}
+
+The musculotendon properties are fully described in the supplementary materials of the aforementioned publication. Importantly, only the tendon slack length, optimal muscle fiber length, maximal isometric muscle force, optimal pennation angle and maximal muscle fiber contraction velocity are extracted from the referred OpenSim model. Other properties are defined in the code and can be changed if desired. By default, the activation and deactivation time constants are 15 and 60 ms respectively (see tau_act and tau_deact in SolveMuscleRedundancy_$<state>$.m).
+
+\section{Examples}
+
+Four examples are provided in the folder examples.
+\subsection{Walking example De Groote et al. 2016}
+\begin{lstlisting}[frame=none,basicstyle=\tiny]
+clear all; close all; clc
+
+%% Choose formulation
+% formulation = 'lMtildeState';
+formulation = 'FtildeState';
+
+%% Example
+% add main folder and subfolder to matlab path (installation)
+filepath=which('Walking_DeGrooteetal2016.m');
+[DirExample_Walking,~,~]=fileparts(filepath); [DirExample,~]=fileparts(DirExample_Walking);[MainDir,~]=fileparts(DirExample);
+addpath(genpath(MainDir));
+
+% Needed Input Arguments
+IK_path=fullfile(MainDir,'Examples','Walking_DeGrooteetal2016','WalkingData','inverse_kinematics.mot');
+ID_path=fullfile(MainDir,'Examples','Walking_DeGrooteetal2016','WalkingData','inverse_dynamics.sto');
+model_path=fullfile(MainDir,'Examples','Walking_DeGrooteetal2016','WalkingData','subject01.osim');
+time=[0.516 1.95];     % Right stance phase (+50ms beginning and end of time interval, more details see manual and publication)
+OutPath=fullfile(MainDir,'Examples','Walking_DeGrooteetal2016','Results');
+
+Misc.MuscleNames_Input={};      % Selects all muscles for the Input DOFS when this is left empty.
+Misc.DofNames_Input={'ankle_angle_r','knee_angle_r','hip_flexion_r','hip_rotation_r','hip_adduction_r'};
+
+% Optional Input Arguments
+Misc.Atendon = [];        % Tendon Stiffness for the selected muscles
+Misc.f_cutoff_ID = 8;         % cutoff frequency filtering ID
+Misc.f_order_ID = 5;             % order frequency filtering ID
+Misc.f_cutoff_lMT = 8;         % cutoff frequency filtering lMT
+Misc.f_order_lMT = 5;             % order frequency filtering lMT
+Misc.f_cutoff_dM= 8;         % cutoff frequency filtering MA
+Misc.f_order_dM = 5;             % order frequency filtering MA
+Misc.f_cutoff_IK= 8;         % cutoff frequency filtering IK
+Misc.f_order_IK = 5;             % order frequency filtering IK
+%% Solve the problem
+switch formulation
+    case 'lMtildeState'
+        [Time,MExcitation,MActivation,RActivation,TForcetilde,TForce,lMtilde,lM,MuscleNames,OptInfo,DatStore]=SolveMuscleRedundancy_lMtildeState(model_path,IK_path,ID_path,time,OutPath,Misc);
+    case 'FtildeState'   
+        [Time,MExcitation,MActivation,RActivation,TForcetilde,TForce,lMtilde,lM,MuscleNames,OptInfo,DatStore]=SolveMuscleRedundancy_FtildeState(model_path,IK_path,ID_path,time,OutPath,Misc);
+end
+
+\end{lstlisting}
+\subsection{Running example De Groote et al. 2016}
+\begin{lstlisting}[frame=none,basicstyle=\tiny]
+clear all;close all;clc
+
+%% Choose formulation
+formulation = 'lMtildeState';
+% formulation = 'FtildeState';
+
+%% Example
+% add main folder and subfolder to matlab path (installation)
+filepath=which('Running_DeGrooteetal2016.m');
+[DirExample_Running,~,~]=fileparts(filepath); [DirExample,~]=fileparts(DirExample_Running);[MainDir,~]=fileparts(DirExample);
+addpath(genpath(MainDir));
+
+% Needed Input Arguments
+IK_path=fullfile(MainDir,'Examples','Running_DeGrooteetal2016','RunningData','IK_Joggen_1.mot');
+ID_path=fullfile(MainDir,'Examples','Running_DeGrooteetal2016','RunningData','ID_Joggen_1.sto');
+model_path=fullfile(MainDir,'Examples','Running_DeGrooteetal2016','RunningData','AdDB_Scaled_FB_FA.osim');
+time=[0.05 0.98];     % Right stance phase (+50ms beginning and end of time interval, more details see see manual and publication)
+OutPath=fullfile(MainDir,'Examples','Running_DeGrooteetal2016','Results');
+
+Misc.MuscleNames_Input={};      % Selects all muscles for the Input DOFS when this is left empty.
+Misc.DofNames_Input={'ankle_angle_r','knee_angle_r','hip_flexion_r','hip_adduction_r','hip_rotation_r'};
+
+% Optional Input Arguments
+Misc.Atendon = [];        % Tendon Stiffness for the selected muscles
+Misc.f_cutoff_ID = 10;         % cutoff frequency filtering ID
+Misc.f_order_ID = 5;             % order frequency filtering ID
+Misc.f_cutoff_lMT = 10;         % cutoff frequency filtering lMT
+Misc.f_order_lMT = 5;             % order frequency filtering lMT
+Misc.f_cutoff_dM= 10;         % cutoff frequency filtering MA
+Misc.f_order_dM = 5;             % order frequency filtering MA
+Misc.f_cutoff_IK= 10;         % cutoff frequency filtering IK
+Misc.f_order_IK = 5;             % order frequency filtering IK
+%% Solve the problem
+switch formulation
+    case 'lMtildeState'
+        [Time,MExcitation,MActivation,RActivation,TForcetilde,TForce,lMtilde,lM,MuscleNames,OptInfo,DatStore]=SolveMuscleRedundancy_lMtildeState(model_path,IK_path,ID_path,time,OutPath,Misc);
+    case 'FtildeState'   
+        [Time,MExcitation,MActivation,RActivation,TForcetilde,TForce,lMtilde,lM,MuscleNames,OptInfo,DatStore]=SolveMuscleRedundancy_FtildeState(model_path,IK_path,ID_path,time,OutPath,Misc);
+end
+\end{lstlisting}
+
+\subsection{OpenSim installation example Gait10dof18m}
+
+\begin{lstlisting} [frame=none,basicstyle=\tiny]
+clear all;close all;clc
+
+%% Choose formulation
+% formulation = 'lMtildeState';
+formulation = 'FtildeState';
+
+%% Example
+% add main folder and subfolder to matlab path (installation)
+filepath=which('Example_Gait10dof18m.m'); [DirExample,~,~]=fileparts(filepath); [DirExample2,~,~]=fileparts(DirExample); [MainDir,~]=fileparts(DirExample2);
+addpath(genpath(MainDir));
+
+% Needed Input Arguments
+Datapath='C:\OpenSim 3.3\Models\Gait10dof18musc\OutputReference';
+IK_path=fullfile(Datapath,'IK','subject01_walk_IK.mot');
+ID_path=[]; % compute ID from the external loads
+model_path=fullfile(Datapath,'subject01.osim');
+time=[0.7 1.4];     % Part of the right stance phase
+OutPath=fullfile(MainDir,'Examples','OpenSimInstallation_Gait10dof18m','Results');
+
+Misc.DofNames_Input={'ankle_angle_r','knee_angle_r','hip_flexion_r'};
+Misc.Loads_path=fullfile(Datapath,'ExperimentalData','subject01_walk_grf.xml');
+Misc.ID_ResultsPath=fullfile(Datapath,'ID','inversedynamics.sto');
+
+%% Solve the problem
+switch formulation
+    case 'lMtildeState'
+        [Time,MExcitation,MActivation,RActivation,TForcetilde,TForce,lMtilde,lM,MuscleNames,OptInfo,DatStore]=SolveMuscleRedundancy_lMtildeState(model_path,IK_path,ID_path,time,OutPath,Misc);
+    case 'FtildeState'   
+        [Time,MExcitation,MActivation,RActivation,TForcetilde,TForce,lMtilde,lM,MuscleNames,OptInfo,DatStore]=SolveMuscleRedundancy_FtildeState(model_path,IK_path,ID_path,time,OutPath,Misc);
+end
+
+\end{lstlisting}
+
+
+\subsection{OpenSim installation example Gait23dof54m}
+
+\begin{lstlisting}[frame=none,basicstyle=\tiny]
+clear all; close all; clc
+%% Choose formulation
+formulation = 'lMtildeState';
+% formulation = 'FtildeState';
+
+%% Example
+% add main folder and subfolder to matlab path (installation)
+filepath=which('Example_Gait23dof54m.m'); [DirExample,~,~]=fileparts(filepath); [DirExample2,~,~]=fileparts(DirExample); [MainDir,~]=fileparts(DirExample2);
+addpath(genpath(MainDir));
+
+% Needed Input Arguments
+Datapath='C:\OpenSim 3.3\Models\Gait2354_Simbody\OutputReference';
+IK_path=fullfile(Datapath,'subject01_walk1_ik.mot');
+ID_path=fullfile(Datapath,'ResultsInverseDynamics','inverse_dynamics.sto');
+model_path=fullfile(Datapath,'subject01_scaledOnly.osim');
+time=[0.7 1.4];     % Part of the right stance phase
+OutPath=fullfile(MainDir,'Examples','OpenSimInstallation_Gait23dof54m','Results');
+
+Misc.MuscleNames_Input={};      % Selects all muscles for the Input DOFS when this is left empty.
+Misc.DofNames_Input={'ankle_angle_r','knee_angle_r','hip_flexion_r'};
+
+%% Solve the problem
+switch formulation
+    case 'lMtildeState'
+        [Time,MExcitation,MActivation,RActivation,TForcetilde,TForce,lMtilde,lM,MuscleNames,OptInfo,DatStore]=SolveMuscleRedundancy_lMtildeState(model_path,IK_path,ID_path,time,OutPath,Misc);
+    case 'FtildeState'   
+        [Time,MExcitation,MActivation,RActivation,TForcetilde,TForce,lMtilde,lM,MuscleNames,OptInfo,DatStore]=SolveMuscleRedundancy_FtildeState(model_path,IK_path,ID_path,time,OutPath,Misc);
+end
+\end{lstlisting}
+
+\end{document}

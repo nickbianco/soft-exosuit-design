@@ -1,0 +1,15 @@
+\select@language {english}
+\contentsline {section}{\numberline {1}Overview}{1}{section.1}
+\contentsline {section}{\numberline {2}Installation Instruction}{1}{section.2}
+\contentsline {section}{\numberline {3}Main Function}{2}{section.3}
+\contentsline {subsection}{\numberline {3.1}Input Arguments}{2}{subsection.3.1}
+\contentsline {subsection}{\numberline {3.2}Output arguments}{3}{subsection.3.2}
+\contentsline {section}{\numberline {4}GPOPS-II}{4}{section.4}
+\contentsline {subsection}{\numberline {4.1}Setup}{4}{subsection.4.1}
+\contentsline {subsection}{\numberline {4.2}Output}{4}{subsection.4.2}
+\contentsline {section}{\numberline {5}Muscle model}{4}{section.5}
+\contentsline {section}{\numberline {6}Examples}{5}{section.6}
+\contentsline {subsection}{\numberline {6.1}Walking example De Groote et al. 2016}{5}{subsection.6.1}
+\contentsline {subsection}{\numberline {6.2}Running example De Groote et al. 2016}{5}{subsection.6.2}
+\contentsline {subsection}{\numberline {6.3}OpenSim installation example Gait10dof18m}{6}{subsection.6.3}
+\contentsline {subsection}{\numberline {6.4}OpenSim installation example Gait23dof54m}{6}{subsection.6.4}
