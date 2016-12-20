@@ -83,9 +83,13 @@ end
 if ~isfield(Misc,'f_order_IK') || isempty(Misc.f_order_IK)
     Misc.f_order_IK=6;
 end
-% Mes Frequency
+% Mesh Frequency
 if ~isfield(Misc,'Mesh_Frequency') || isempty(Misc.Mesh_Frequency)
    Misc.Mesh_Frequency=100;
+end
+% Cost Function
+if ~isfield(Misc,'costfun') || isempty(Misc.costfun)
+   Misc.costfun='Exc';
 end
 
 % ------------------------------------------------------------------------%
@@ -150,7 +154,7 @@ DatStore = SolveStaticOptimization_IPOPT(DatStore);
 
 % Input arguments
 auxdata.NMuscles = DatStore.nMuscles;   % number of muscles
-auxdata.Ndof = DatStore.nDOF;           % humber of dods
+auxdata.Ndof = DatStore.nDOF;           % humber of dofs
 % DatStore.time = DatStore.time;          % time window
 auxdata.ID = DatStore.T_exp;            % inverse dynamics
 auxdata.params = DatStore.params;       % Muscle-tendon parameters
@@ -190,6 +194,8 @@ lMtilde_min = 0.2; lMtilde_max = 1.8;   % bounds on normalized muscle fiber leng
 t0 = DatStore.time(1); tf = DatStore.time(end);
 bounds.phase.initialtime.lower = t0; bounds.phase.initialtime.upper = t0;
 bounds.phase.finaltime.lower = tf; bounds.phase.finaltime.upper = tf;
+auxdata.initialtime = t0;
+auxdata.finaltime = tf;
 % Controls bounds
 umin = e_min*ones(1,auxdata.NMuscles); umax = e_max*ones(1,auxdata.NMuscles);
 vMtildemin = vMtilde_min*ones(1,auxdata.NMuscles); vMtildemax = vMtilde_max*ones(1,auxdata.NMuscles);
@@ -248,7 +254,7 @@ setup.derivatives.supplier = 'adigator';
 setup.scales.method = 'none';
 setup.mesh.method = 'hp-PattersonRao';
 setup.mesh.tolerance = 1e-3;
-setup.mesh.maxiterations = 0;
+setup.mesh.maxiterations = 5;
 setup.mesh.colpointsmin = 3;
 setup.mesh.colpointsmax = 10;
 setup.method = 'RPM-integration';
@@ -256,8 +262,8 @@ setup.displaylevel = 2;
 NMeshIntervals = round((tf-t0)*Misc.Mesh_Frequency);
 setup.mesh.phase.colpoints = 3*ones(1,NMeshIntervals);
 setup.mesh.phase.fraction = (1/(NMeshIntervals))*ones(1,NMeshIntervals);
-setup.functions.continuous = @musdynContinous_lMtildeState;
-setup.functions.endpoint = @musdynEndpoint_lMtildeState;
+setup.functions.continuous = str2func(['musdynContinous_lMtildeState_' Misc.costfun]);
+setup.functions.endpoint = str2func(['musdynEndpoint_lMtildeState_' Misc.costfun]);
     
 % ADiGator setup
 persistent splinestruct
@@ -273,11 +279,12 @@ end
 setup.auxdata.splinestruct = splinestructad;
 adigatorGenFiles4gpops2(setup)
 
-setup.functions.continuous = @Wrap4musdynContinous_lMtildeState;
-setup.adigatorgrd.continuous = @musdynContinous_lMtildeStateGrdWrap;
-setup.adigatorgrd.endpoint   = @musdynEndpoint_lMtildeStateADiGatorGrd;
-setup.adigatorhes.continuous = @musdynContinous_lMtildeStateHesWrap;
-setup.adigatorhes.endpoint   = @musdynEndpoint_lMtildeStateADiGatorHes;
+setup.functions.continuous = str2func(['Wrap4musdynContinous_lMtildeState_' Misc.costfun]);
+setup.adigatorgrd.continuous = str2func(['musdynContinous_lMtildeState_' Misc.costfun 'GrdWrap']);
+setup.adigatorgrd.endpoint   = str2func(['musdynEndpoint_lMtildeState_' Misc.costfun 'ADiGatorGrd']);
+setup.adigatorhes.continuous = str2func(['musdynContinous_lMtildeState_' Misc.costfun 'HesWrap']);
+setup.adigatorhes.endpoint   = str2func(['musdynEndpoint_lMtildeState_' Misc.costfun 'ADiGatorHes']);
+
 
 %% ---------------------------------------------------------------------- %
 % ----------------------------------------------------------------------- %
