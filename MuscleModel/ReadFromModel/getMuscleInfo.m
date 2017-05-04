@@ -134,11 +134,20 @@ for i = 2:M         % filtering time vector not needed (start from 2)
     ID_data.data(:,i) = filtfilt(B,A,ID_data.data(:,i));
 end
 
+% Create DOF indices for ID data (which can be different than the order 
+% for IK).
+DOF_ID_inds = zeros(1, length(Misc.DofNames));
+for idof = 1:length(Misc.DofNames)
+    index = strmatch(Misc.DofNames{idof}, ID_data.colheaders);
+    assert(length(index) == 1);
+    DOF_ID_inds(idof) = index;
+end
+
 % select ID data between start and end
 ID_data_int=interp1(ID_data.data(:,1),ID_data.data,IK_data.data(:,1));       % interpolate data for IK sampling frequency
 t_ID=ID_data_int(:,1); t_ID=round(t_ID*10000)/10000;
 ind0=find(t_ID>=Misc.time(1),1,'first'); ind_end=find(t_ID<=Misc.time(2),1,'last');
 ID_inds=ind0:ind_end;
-DatStore.T_exp=ID_data_int(ID_inds,DOF_inds+1);          % +1 for time vector
+DatStore.T_exp=ID_data_int(ID_inds,DOF_ID_inds);
 
 end
