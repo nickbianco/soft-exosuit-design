@@ -138,7 +138,7 @@ end
 % for IK).
 DOF_ID_inds = zeros(1, length(Misc.DofNames));
 for idof = 1:length(Misc.DofNames)
-    index = strmatch(Misc.DofNames{idof}, ID_data.colheaders);
+    index = strmatch(strcat(Misc.DofNames{idof}, '_moment'), ID_data.colheaders);
     assert(length(index) == 1);
     DOF_ID_inds(idof) = index;
 end
