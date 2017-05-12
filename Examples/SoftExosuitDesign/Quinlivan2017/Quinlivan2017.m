@@ -32,6 +32,9 @@ Misc.study = 'SoftExosuitDesign/Quinlivan2017';
 Misc.model_mass = 75.1646; % kg (Gait2354 mass)
 
 %% Solve the problem
+Misc.exo_force_level = 0;
+[Time,MExcitation,MActivation,RActivation,TForcetilde,TForce,lMtilde,lM,MuscleNames,OptInfo,DatStore]=SolveMuscleRedundancy_lMtildeState(model_path,IK_path,ID_path,time,OutPath,Misc);
+
 for i = 1
     % Device force level
     % 1 --> MIN

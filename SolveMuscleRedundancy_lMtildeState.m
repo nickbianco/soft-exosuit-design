@@ -97,7 +97,7 @@ if ~isfield(Misc,'study') || isempty(Misc.study)
 end
 % Device force level for Quinlivan study
 if ~isfield(Misc,'exo_force_level') || isempty(Misc.exo_force_level)
-   Misc.exo_force_level = 1;
+   Misc.exo_force_level = 0;
 end
 % Model mass
 if ~isfield(Misc,'model_mass') || isempty(Misc.model_mass)
@@ -265,13 +265,15 @@ exoHipMoment = exoHipMomentPeaks(Misc.exo_force_level) * exoHipNormalizedMoment;
 
 % Interpolate exosuit moments to match data
 DatStore.T_exo = zeros(length(DatStore.time),auxdata.Ndof);
-for dof = 1:auxdata.Ndof
-    if strcmp('ankle_angle_r', DatStore.DOFNames{dof})
-        % Negative to match ankle_angle_r coord convention
-        DatStore.T_exo(:,dof) = -interp1(exoTime, exoAnkleMoment, DatStore.time);
-    elseif strcmp('hip_flexion_r', DatStore.DOFNames{dof})
-        % Positive to match hip_flexion_r coord convention
-        DatStore.T_exo(:,dof) = interp1(exoTime, exoHipMoment, DatStore.time);   
+if Misc.exo_force_level
+    for dof = 1:auxdata.Ndof
+        if strcmp('ankle_angle_r', DatStore.DOFNames{dof})
+            % Negative to match ankle_angle_r coord convention
+            DatStore.T_exo(:,dof) = -interp1(exoTime, exoAnkleMoment, DatStore.time);
+        elseif strcmp('hip_flexion_r', DatStore.DOFNames{dof})
+            % Positive to match hip_flexion_r coord convention
+            DatStore.T_exo(:,dof) = interp1(exoTime, exoHipMoment, DatStore.time);
+        end
     end
 end
 
