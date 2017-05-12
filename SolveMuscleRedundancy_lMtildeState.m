@@ -91,6 +91,21 @@ end
 if ~isfield(Misc,'costfun') || isempty(Misc.costfun)
    Misc.costfun='Exc';
 end
+% Which study?
+if ~isfield(Misc,'study') || isempty(Misc.study)
+   Misc.study='DeGroote2016';
+end
+
+% Based on study and cost function, decide which continuous and endpoint
+% functions to use
+study = strsplit(Misc.study,'/');
+switch study{1}
+    case 'DeGroote2016'
+        tag = '';
+    case 'SoftExosuitDesign'
+        tag = ['Exo' study{2}];       
+end
+tag = [tag '_' Misc.costfun];
 
 % ------------------------------------------------------------------------%
 % Compute ID -------------------------------------------------------------%
@@ -262,8 +277,8 @@ setup.displaylevel = 2;
 NMeshIntervals = round((tf-t0)*Misc.Mesh_Frequency);
 setup.mesh.phase.colpoints = 3*ones(1,NMeshIntervals);
 setup.mesh.phase.fraction = (1/(NMeshIntervals))*ones(1,NMeshIntervals);
-setup.functions.continuous = str2func(['musdynContinous_lMtildeState_' Misc.costfun]);
-setup.functions.endpoint = str2func(['musdynEndpoint_lMtildeState_' Misc.costfun]);
+setup.functions.continuous = str2func(['musdynContinous_lMtildeState' tag]);
+setup.functions.endpoint = str2func(['musdynEndpoint_lMtildeState' tag]);
     
 % ADiGator setup
 persistent splinestruct
@@ -279,11 +294,11 @@ end
 setup.auxdata.splinestruct = splinestructad;
 adigatorGenFiles4gpops2(setup)
 
-setup.functions.continuous = str2func(['Wrap4musdynContinous_lMtildeState_' Misc.costfun]);
-setup.adigatorgrd.continuous = str2func(['musdynContinous_lMtildeState_' Misc.costfun 'GrdWrap']);
-setup.adigatorgrd.endpoint   = str2func(['musdynEndpoint_lMtildeState_' Misc.costfun 'ADiGatorGrd']);
-setup.adigatorhes.continuous = str2func(['musdynContinous_lMtildeState_' Misc.costfun 'HesWrap']);
-setup.adigatorhes.endpoint   = str2func(['musdynEndpoint_lMtildeState_' Misc.costfun 'ADiGatorHes']);
+setup.functions.continuous = str2func(['Wrap4musdynContinous_lMtildeState' tag]);
+setup.adigatorgrd.continuous = str2func(['musdynContinous_lMtildeState' tag 'GrdWrap']);
+setup.adigatorgrd.endpoint   = str2func(['musdynEndpoint_lMtildeState' tag 'ADiGatorGrd']);
+setup.adigatorhes.continuous = str2func(['musdynContinous_lMtildeState' tag 'HesWrap']);
+setup.adigatorhes.endpoint   = str2func(['musdynEndpoint_lMtildeState' tag 'ADiGatorHes']);
 
 
 %% ---------------------------------------------------------------------- %

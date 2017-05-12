@@ -28,8 +28,7 @@ Misc.Loads_path = fullfile(getenv('OPENSIM_HOME'), 'Models', 'Gait2354_Simbody',
 
 % Optional Input Arguments
 Misc.costfun = 'Exc_Act';
-
-% TODO: optional input for our assistive device condition
+Misc.study = 'SoftExosuitDesign/Quinlivan2017';
 
 %% Solve the problem
 [Time,MExcitation,MActivation,RActivation,TForcetilde,TForce,lMtilde,lM,MuscleNames,OptInfo,DatStore]=SolveMuscleRedundancy_lMtildeState(model_path,IK_path,ID_path,time,OutPath,Misc);
