@@ -95,6 +95,14 @@ end
 if ~isfield(Misc,'study') || isempty(Misc.study)
    Misc.study='DeGroote2016';
 end
+% Device force level for Quinlivan study
+if ~isfield(Misc,'exo_force_level') || isempty(Misc.exo_force_level)
+   Misc.exo_force_level = 1;
+end
+% Model mass
+if ~isfield(Misc,'model_mass') || isempty(Misc.model_mass)
+   Misc.model_mass = 1;
+end
 
 % Based on study and cost function, decide which continuous and endpoint
 % functions to use
@@ -103,7 +111,7 @@ switch study{1}
     case 'DeGroote2016'
         tag = '';
     case 'SoftExosuitDesign'
-        tag = ['Exo' study{2}];       
+        tag = ['Exo' study{2}];
 end
 tag = [tag '_' Misc.costfun];
 
@@ -243,12 +251,37 @@ guess.phase.control = [DatStore.SoAct DatStore.SoRAct./150 0.01*ones(N,auxdata.N
 guess.phase.state =  [DatStore.SoAct ones(N,auxdata.NMuscles)];
 guess.phase.integral = 0;
 
+% Exosuit moment curves
+ExoCurves = load('/Examples/SoftExosuitDesign/ExoCurves.mat');
+exoTime = ExoCurves.time;
+% Peaks are body mass normalized so multiply by model mass
+exoAnkleMomentPeaks = ExoCurves.am_peak * Misc.model_mass;
+exoAnkleNormalizedMoment = ExoCurves.am_norm;
+exoHipMomentPeaks = ExoCurves.hm_peak * Misc.model_mass;
+exoHipNormalizedMoment = ExoCurves.hm_norm;
+
+exoAnkleMoment = exoAnkleMomentPeaks(Misc.exo_force_level) * exoAnkleNormalizedMoment;
+exoHipMoment = exoHipMomentPeaks(Misc.exo_force_level) * exoHipNormalizedMoment;
+
+% Interpolate exosuit moments to match data
+DatStore.T_exo = zeros(length(DatStore.time),auxdata.Ndof);
+for dof = 1:auxdata.Ndof
+    if strcmp('ankle_angle_r', DatStore.DOFNames{dof})
+        % Negative to match ankle_angle_r coord convention
+        DatStore.T_exo(:,dof) = -interp1(exoTime, exoAnkleMoment, DatStore.time);
+    elseif strcmp('hip_flexion_r', DatStore.DOFNames{dof})
+        % Positive to match hip_flexion_r coord convention
+        DatStore.T_exo(:,dof) = interp1(exoTime, exoHipMoment, DatStore.time);   
+    end
+end
+
 % Spline structures
 for dof = 1:auxdata.Ndof
     for m = 1:auxdata.NMuscles       
         auxdata.JointMASpline(dof).Muscle(m) = spline(DatStore.time,auxdata.MA(dof).Joint(:,m));       
     end
     auxdata.JointIDSpline(dof) = spline(DatStore.time,DatStore.T_exp(:,dof));
+    auxdata.JointEXOSpline(dof) = spline(DatStore.time,DatStore.T_exo(:,dof));
 end
 
 for m = 1:auxdata.NMuscles
@@ -277,8 +310,8 @@ setup.displaylevel = 2;
 NMeshIntervals = round((tf-t0)*Misc.Mesh_Frequency);
 setup.mesh.phase.colpoints = 3*ones(1,NMeshIntervals);
 setup.mesh.phase.fraction = (1/(NMeshIntervals))*ones(1,NMeshIntervals);
-setup.functions.continuous = str2func(['musdynContinous_lMtildeState' tag]);
-setup.functions.endpoint = str2func(['musdynEndpoint_lMtildeState' tag]);
+setup.functions.continuous = str2func(['continous_lMtilde' tag]);
+setup.functions.endpoint = str2func(['endpoint_lMtilde' tag]);
     
 % ADiGator setup
 persistent splinestruct
@@ -294,11 +327,11 @@ end
 setup.auxdata.splinestruct = splinestructad;
 adigatorGenFiles4gpops2(setup)
 
-setup.functions.continuous = str2func(['Wrap4musdynContinous_lMtildeState' tag]);
-setup.adigatorgrd.continuous = str2func(['musdynContinous_lMtildeState' tag 'GrdWrap']);
-setup.adigatorgrd.endpoint   = str2func(['musdynEndpoint_lMtildeState' tag 'ADiGatorGrd']);
-setup.adigatorhes.continuous = str2func(['musdynContinous_lMtildeState' tag 'HesWrap']);
-setup.adigatorhes.endpoint   = str2func(['musdynEndpoint_lMtildeState' tag 'ADiGatorHes']);
+setup.functions.continuous = str2func(['Wrap4continous_lMtilde' tag]);
+setup.adigatorgrd.continuous = str2func(['continous_lMtilde' tag 'GrdWrap']);
+setup.adigatorgrd.endpoint   = str2func(['endpoint_lMtilde' tag 'ADiGatorGrd']);
+setup.adigatorhes.continuous = str2func(['continous_lMtilde' tag 'HesWrap']);
+setup.adigatorhes.endpoint   = str2func(['endpoint_lMtilde' tag 'ADiGatorHes']);
 
 
 %% ---------------------------------------------------------------------- %

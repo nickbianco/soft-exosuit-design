@@ -18,17 +18,28 @@ Datapath = fullfile(getenv('OPENSIM_HOME'), 'Models', 'Gait2354_Simbody', ...
 IK_path=fullfile(Datapath,'subject01_walk1_ik.mot');
 ID_path=fullfile(Datapath,'ResultsInverseDynamics','inverse_dynamics.sto');
 model_path=fullfile(Datapath,'subject01_scaledOnly.osim');
-time=[0.7 1.4];     % Part of the right stance phase
+time=[0.6 1.4];     % Right stance phase
 OutPath=fullfile(DirCurrent,'Results');
 
 %Misc.MuscleNames_Input={};      % Selects all muscles for the Input DOFS when this is left empty.
 % TODO: select DOFs
-Misc.DofNames_Input={'ankle_angle_r','knee_angle_r','hip_flexion_r'};
+Misc.DofNames_Input={'ankle_angle_r','knee_angle_r','hip_flexion_r','hip_adduction_r','hip_rotation_r'};
 Misc.Loads_path = fullfile(getenv('OPENSIM_HOME'), 'Models', 'Gait2354_Simbody','subject01_walk1_grf.xml');
 
 % Optional Input Arguments
 Misc.costfun = 'Exc_Act';
 Misc.study = 'SoftExosuitDesign/Quinlivan2017';
+Misc.model_mass = 75.1646; % kg (Gait2354 mass)
 
 %% Solve the problem
-[Time,MExcitation,MActivation,RActivation,TForcetilde,TForce,lMtilde,lM,MuscleNames,OptInfo,DatStore]=SolveMuscleRedundancy_lMtildeState(model_path,IK_path,ID_path,time,OutPath,Misc);
+for i = 1
+    % Device force level
+    % 1 --> MIN
+    % 2 --> MED
+    % 3 --> HIGH
+    % 4 --> MAX
+    % >4 --> Beyond Quinlivan device peak values
+    Misc.exo_force_level = 1;
+    
+    [Time,MExcitation,MActivation,RActivation,TForcetilde,TForce,lMtilde,lM,MuscleNames,OptInfo,DatStore]=SolveMuscleRedundancy_lMtildeState(model_path,IK_path,ID_path,time,OutPath,Misc);
+end

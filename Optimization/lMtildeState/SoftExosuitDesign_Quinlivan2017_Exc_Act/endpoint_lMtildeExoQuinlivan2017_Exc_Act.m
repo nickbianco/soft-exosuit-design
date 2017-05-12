@@ -1,4 +1,4 @@
-function output = musdynEndpoint_lMtildeStateExoQuinlivan2017_Exc_Act(input)
+function output = endpoint_lMtildeExoQuinlivan2017_Exc_Act(input)
 
 q = input.phase.integral;
 output.objective = q;

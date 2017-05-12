@@ -13,6 +13,7 @@ for dof = 1:Ndof
         sstruct.MA(:,index_sel) = ppval(input.auxdata.JointMASpline(dof).Muscle(m),t);   
     end
     sstruct.ID(:,dof) = ppval(input.auxdata.JointIDSpline(dof),t);
+    sstruct.EXO(:,dof) = ppval(input.auxdata.JointEXOSpline(dof),t);
 end
 
 for m = 1:NMuscles

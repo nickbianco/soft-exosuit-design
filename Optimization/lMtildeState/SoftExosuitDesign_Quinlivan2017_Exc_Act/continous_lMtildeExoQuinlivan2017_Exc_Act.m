@@ -1,4 +1,4 @@
-function phaseout = musdynContinous_lMtildeStateExoQuinlivan2017_Exc_Act(input)
+function phaseout = continous_lMtildeExoQuinlivan2017_Exc_Act(input)
 
 % Get input data
 NMuscles        = input.auxdata.NMuscles;
@@ -27,8 +27,9 @@ Topt = 150;
 Tdiff = zeros(numColPoints,Ndof);
 for dof = 1:Ndof
     T_exp=splinestruct.ID(:,dof);
+    T_exo=splinestruct.EXO(:,dof);
     index_sel=(dof-1)*(NMuscles)+1:(dof-1)*(NMuscles)+NMuscles;
-    T_sim=sum(F.*splinestruct.MA(:,index_sel),2) + Topt*aT(:,dof);
+    T_sim=sum(F.*splinestruct.MA(:,index_sel),2) + Topt*aT(:,dof) + T_exo;
     Tdiff(:,dof) =  (T_exp-T_sim);
 end
 
