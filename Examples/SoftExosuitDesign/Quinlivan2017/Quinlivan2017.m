@@ -32,17 +32,21 @@ Misc.study = 'SoftExosuitDesign/Quinlivan2017';
 Misc.model_mass = 75.1646; % kg (Gait2354 mass)
 
 %% Solve the problem
+
 Misc.exo_force_level = 0;
 [Time,MExcitation,MActivation,RActivation,TForcetilde,TForce,lMtilde,lM,MuscleNames,OptInfo,DatStore]=SolveMuscleRedundancy_lMtildeState(model_path,IK_path,ID_path,time,OutPath,Misc);
+filename=strcat('forceLevel',int2str(Misc.exo_force_level),'.mat');
+save(filename);
 
-for i = 1
+for i = 1:4
     % Device force level
     % 1 --> MIN
     % 2 --> MED
     % 3 --> HIGH
     % 4 --> MAX
     % >4 --> Beyond Quinlivan device peak values
-    Misc.exo_force_level = 1;
-    
+    Misc.exo_force_level = i;
     [Time,MExcitation,MActivation,RActivation,TForcetilde,TForce,lMtilde,lM,MuscleNames,OptInfo,DatStore]=SolveMuscleRedundancy_lMtildeState(model_path,IK_path,ID_path,time,OutPath,Misc);
+    filename=strcat('forceLevel',int2str(Misc.exo_force_level),'.mat');
+    save(filename);
 end
