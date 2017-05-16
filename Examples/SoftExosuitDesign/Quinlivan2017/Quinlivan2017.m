@@ -27,18 +27,20 @@ Misc.DofNames_Input={'ankle_angle_r','knee_angle_r','hip_flexion_r','hip_adducti
 Misc.Loads_path = fullfile(getenv('OPENSIM_HOME'), 'Models', 'Gait2354_Simbody','subject01_walk1_grf.xml');
 
 % Optional Input Arguments
-Misc.costfun = 'Exc_Act';
+Misc.costfun = 'MinAlex';
 Misc.study = 'SoftExosuitDesign/Quinlivan2017';
 Misc.model_mass = 75.1646; % kg (Gait2354 mass)
 
-%% Solve the problem
+% Change to cost function subdirectory
+cd(fullfile(DirCurrent,Misc.costfun))
 
+%% Solve the problem
 % Misc.exo_force_level = 0;
 % [Time,MExcitation,MActivation,RActivation,TForcetilde,TForce,lMtilde,lM,MuscleNames,OptInfo,DatStore]=SolveMuscleRedundancy_lMtildeState(model_path,IK_path,ID_path,time,OutPath,Misc);
 % filename=strcat('forceLevel',int2str(Misc.exo_force_level),'.mat');
 % save(filename);
 
-for i = 10
+for i = 5:10
     % Device force level
     % 1 --> MIN
     % 2 --> MED
