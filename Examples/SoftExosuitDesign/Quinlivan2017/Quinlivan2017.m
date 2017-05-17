@@ -35,10 +35,10 @@ Misc.model_mass = 75.1646; % kg (Gait2354 mass)
 cd(fullfile(DirCurrent,Misc.costfun))
 
 %% Solve the problem
-% Misc.exo_force_level = 0;
-% [Time,MExcitation,MActivation,RActivation,TForcetilde,TForce,lMtilde,lM,MuscleNames,OptInfo,DatStore]=SolveMuscleRedundancy_lMtildeState(model_path,IK_path,ID_path,time,OutPath,Misc);
-% filename=strcat('forceLevel',int2str(Misc.exo_force_level),'.mat');
-% save(filename);
+Misc.exo_force_level = 0;
+[Time,MExcitation,MActivation,RActivation,TForcetilde,TForce,lMtilde,lM,MuscleNames,OptInfo,DatStore]=SolveMuscleRedundancy_lMtildeState(model_path,IK_path,ID_path,time,OutPath,Misc);
+filename=strcat('forceLevel',int2str(Misc.exo_force_level),'.mat');
+save(filename);
 
 for i = 5:10
     % Device force level

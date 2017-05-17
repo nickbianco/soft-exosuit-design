@@ -227,9 +227,17 @@ bounds.phase.control.lower = [umin aTmin vMtildemin]; bounds.phase.control.upper
 % States bunds
 actMin = a_min*ones(1,auxdata.NMuscles); actMax = a_max*ones(1,auxdata.NMuscles);
 lMtildemin = lMtilde_min*ones(1,auxdata.NMuscles); lMtildemax = lMtilde_max*ones(1,auxdata.NMuscles);
-bounds.phase.initialstate.lower = [actMin, lMtildemin]; bounds.phase.initialstate.upper = [actMax, lMtildemax];
-bounds.phase.state.lower = [actMin, lMtildemin]; bounds.phase.state.upper = [actMax, lMtildemax];
-bounds.phase.finalstate.lower = [actMin, lMtildemin]; bounds.phase.finalstate.upper = [actMax, lMtildemax];
+if strcmp(study{2},'HipAnkle') 
+    aDmin = zeros(1,auxdata.NMuscles); aDmax = ones(1,auxdata.NMuscles);
+    bounds_lower = [actMin, lMtildemin, aDmin];
+    bounds_upper = [actMax, lMtildemax, aDmax];
+else
+    bounds_lower = [actMin, lMtildemin];
+    bounds_upper = [actMax, lMtildemax];
+end
+bounds.phase.initialstate.lower = bounds_lower; bounds.phase.initialstate.upper = bounds_upper;
+bounds.phase.state.lower = bounds_lower; bounds.phase.state.upper = bounds_upper;
+bounds.phase.finalstate.lower = bounds_lower; bounds.phase.finalstate.upper = bounds_upper;
 % Integral bounds
 bounds.phase.integral.lower = 0; bounds.phase.integral.upper = 10000*(tf-t0);
 
@@ -251,9 +259,11 @@ guess.phase.control = [DatStore.SoAct DatStore.SoRAct./150 0.01*ones(N,auxdata.N
 guess.phase.state =  [DatStore.SoAct ones(N,auxdata.NMuscles)];
 guess.phase.integral = 0;
 
+% Empty exosuit torque data structure
 DatStore.T_exo = zeros(length(DatStore.time),auxdata.Ndof);
+DatStore.Fopt_exo = zeros(auxdata.Ndof,1);
 
-if study{2}=='Quinlivan2017'
+if strcmp(study{2},'Quinlivan2017')
     % Exosuit moment curves
     ExoCurves = load('/Examples/SoftExosuitDesign/Quinlivan2017/ExoCurves.mat');
     exoTime = ExoCurves.time;
@@ -274,6 +284,29 @@ if study{2}=='Quinlivan2017'
             elseif strcmp('hip_flexion_r', DatStore.DOFNames{dof})
                 % Positive to match hip_flexion_r coord convention
                 DatStore.T_exo(:,dof) = interp1(exoTime, exoHipMoment, DatStore.time);
+            end
+        end
+    end
+end
+
+if strcmp(study{2},'HipAnkle') 
+    % Exosuit moment curves
+    ExoCurves = load('/Examples/SoftExosuitDesign/HipAnkle/ExoCurves.mat');
+    % Peaks are body mass normalized so multiply by model mass
+    exoAnkleForcePeaks = ExoCurves.af_peak * Misc.model_mass;
+    exoHipForcePeaks = ExoCurves.hf_peak * Misc.model_mass;
+
+    % Interpolate exosuit moments to match data
+    if Misc.exo_force_level    
+        exoAnkleForce = exoAnkleForcePeaks(Misc.exo_force_level);
+        exoHipForce = exoHipForcePeaks(Misc.exo_force_level);
+        for dof = 1:auxdata.Ndof
+            if strcmp('ankle_angle_r', DatStore.DOFNames{dof})
+                % Negative to match ankle_angle_r coord convention
+                DatStore.Fopt_exo(dof) = -exoAnkleForce;
+            elseif strcmp('hip_flexion_r', DatStore.DOFNames{dof})
+                % Positive to match hip_flexion_r coord convention
+                DatStore.Fopt_exo(dof) = exoHipForce;
             end
         end
     end

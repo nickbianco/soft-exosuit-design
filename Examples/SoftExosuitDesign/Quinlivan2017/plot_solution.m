@@ -2,7 +2,7 @@
 import org.opensim.modeling.*
 load ExoCurves.mat
 
-cost=2;
+cost=1;
 switch cost
     case 1
         costdir = 'Exc_Act';
@@ -143,6 +143,8 @@ for x=1:11
     
 
 end
+
+folder = [Misc.costfun '_Hip_Shift']
 
 %% Plot bar graphs
 
