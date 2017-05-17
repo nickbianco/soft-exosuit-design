@@ -41,7 +41,7 @@ for x=0:10
     assert(length(deviceIndices) == 1);
 
     % Metabolic cost
-    modelApoorva = Model('Rajagopal2015.osim');
+    modelApoorva = Model('../Rajagopal2015.osim');
     musclesApoorva = modelApoorva.getMuscles();
     % pect_r, quad_fem_r and gem_r are not in Apoorva model
     % all replaced by omit

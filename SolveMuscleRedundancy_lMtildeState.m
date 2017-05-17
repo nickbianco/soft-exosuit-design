@@ -103,6 +103,12 @@ end
 if ~isfield(Misc,'model_mass') || isempty(Misc.model_mass)
    Misc.model_mass = 1;
 end
+% Subcase
+if ~isfield(Misc,'subcase') || isempty(Misc.subcase)
+    folder = Misc.costfun;
+else
+    folder = [Misc.costfun '_' Misc.subcase];
+end
 
 % Based on study and cost function, decide which continuous and endpoint
 % functions to use
@@ -253,9 +259,9 @@ guess.phase.integral = 0;
 
 DatStore.T_exo = zeros(length(DatStore.time),auxdata.Ndof);
 
-if study{2}=='Quinlivan2017'
+if strcmp(study{2},'Quinlivan2017')
     % Exosuit moment curves
-    ExoCurves = load('/Examples/SoftExosuitDesign/Quinlivan2017/ExoCurves.mat');
+    ExoCurves = load(['/Examples/SoftExosuitDesign/Quinlivan2017/' folder '/ExoCurves.mat']);
     exoTime = ExoCurves.time;
     % Peaks are body mass normalized so multiply by model mass
     exoAnkleMomentPeaks = ExoCurves.am_peak * Misc.model_mass;
