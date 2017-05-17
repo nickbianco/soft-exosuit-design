@@ -1,12 +1,23 @@
 %% Calculate metabolic cost
-clear all
 import org.opensim.modeling.*
 load ExoCurves.mat
 
-for x=0:10
+cost=1;
+switch cost
+    case 1
+        costdir = 'Exc_Act';
+    case 2
+        costdir = 'MinAlex';
+end
 
-    filename=strcat('forceLevel',int2str(x),'.mat');
-    load(filename)
+cmap = zeros(11,3);
+cmap(1,:) = [1 1 1];
+cmap(2:end,:) = jet(10);
+
+for x=1:11
+
+    filename=strcat('forceLevel',int2str(x-1),'.mat');
+    load(fullfile(costdir,filename))
 
     numDOFs = DatStore.nDOF;
     numMuscles = DatStore.nMuscles;
@@ -101,13 +112,42 @@ for x=0:10
 
     bodyMass = 75; % kg
     wholebody_energy_rate = nansum(musc_energy_rate,2);
-    norm_average_wholebody_energy_rate(x+1) = mean(wholebody_energy_rate) / bodyMass;
+    norm_average_wholebody_energy_rate(x) = mean(wholebody_energy_rate) / bodyMass;
     
-    activations(:,:,x+1)=a;
+    % Muscle activations
+    h1 = figure(1);
+    for m = 1:numMuscles
+        subplot(6,4,m)
+        title(MuscleNames(m),'interpreter', 'none')
+        plot(time,a(:,m),'Color',cmap(x,:),'LineWidth',1.2)
+        hold on
+    end
+    
+    % Normalized fiber length
+    h2 = figure(2);
+    for m = 1:numMuscles
+        subplot(6,4,m)
+        title(MuscleNames(m),'interpreter', 'none')
+        plot(time,lMtilde(:,m),'Color',cmap(x,:),'LineWidth',1.2)
+        hold on
+    end
+    
+    % Normalized fiber velocity
+    h3 = figure(3);
+    for m = 1:numMuscles
+        subplot(6,4,m)
+        title(MuscleNames(m),'interpreter', 'none')
+        plot(time,vMtilde(:,m),'Color',cmap(x,:),'LineWidth',1.2)
+        hold on
+    end
+    
 
 end
 
+folder = [Misc.costfun '_Hip_Shift']
+
 %% Plot bar graphs
+
 for i=1:length(norm_average_wholebody_energy_rate)-1
     p_change(i)= (norm_average_wholebody_energy_rate(i+1)-...
     norm_average_wholebody_energy_rate(1))/norm_average_wholebody_energy_rate(1)*100;
@@ -132,91 +172,91 @@ ylabel('Change in Metabolic Rate [%]')
 xlabel('Peak Assistive Force [% BW]')
 title('Reduction in Net Metabolic Rate')
 %% Plot all activations
-
-figure;
-%list of muscle numbers to include
-muscles=1:24;
-%these do not have muscle parameters
-muscles(20)=[];
-muscles(17)=[];
-muscles(16)=[];
-%muscle only crosses knee
-muscles(9)=[];
-
-p_stance = (time-0.6)./(1.43-0.6);
-cmap=jet(11);
-
-for i=1:length(muscles)
-    subplot(5,4,i)
-    % remove _r and _ from titles
-    title(strrep(strrep(MuscleNames(muscles(i)),'_r',''),'_',''));
-    hold on
-    for j=1:11
-        plot(p_stance,activations(:,muscles(i),j),'Color',cmap(j,:))
-    end
-end
-
-%% Plot hip flexors/extensors activations
-
-figure;
-title('Hip Muscle Activations')
-%list of muscle numbers to include
-muscles=[14,15,19,4];
-p_stance = (time-0.6)./(1.43-0.6);
-cmap=jet(11);
-
-for i=1:length(muscles)
-    subplot(1,4,i)
-    xlabel('Percent Stance Phase')
-    if i==1
-        ylabel('Activation')
-    end
-    % remove _r and _ from titles
-    title(strrep(strrep(MuscleNames(muscles(i)),'_r',''),'_',''));
-    hold on
-    for j=1:11
-        plot(p_stance,activations(:,muscles(i),j),'Color',cmap(j,:))
-    end
-end
-
-%% Plot ankle flexors/extensors activations
-
-figure;
-%list of muscle numbers to include
-muscles=[21,22,23,24];
-p_stance = (time-0.6)./(1.43-0.6);
-cmap=jet(11);
-
-for i=1:length(muscles)
-    subplot(1,4,i)
-    xlabel('Percent Stance Phase')
-    if i==1
-        ylabel('Activation')
-    end
-    % remove _r and _ from titles
-    title(strrep(strrep(MuscleNames(muscles(i)),'_r',''),'_',''));
-    hold on
-    for j=1:11
-        plot(p_stance,activations(:,muscles(i),j),'Color',cmap(j,:))
-    end
-end
-
-%% Plot high power activations
-
-figure;
-%list of muscle numbers to include
-muscles=[7,12];
-p_stance = (time-0.6)./(1.43-0.6);
-cmap=jet(11);
-
-for i=1:length(muscles)
-    subplot(1,2,i)
-    % remove _r and _ from titles
-    title(strrep(strrep(MuscleNames(muscles(i)),'_r',''),'_',''));
-    xlabel('Percent Stance Phase')
-    ylabel('Activation')
-    hold on
-    for j=1:11
-        plot(p_stance,activations(:,muscles(i),j),'Color',cmap(j,:),'LineWidth',1)
-    end
-end
+% 
+% figure;
+% %list of muscle numbers to include
+% muscles=1:24;
+% %these do not have muscle parameters
+% muscles(20)=[];
+% muscles(17)=[];
+% muscles(16)=[];
+% %muscle only crosses knee
+% muscles(9)=[];
+% 
+% p_stance = (time-0.6)./(1.43-0.6);
+% cmap=jet(11);
+% 
+% for i=1:length(muscles)
+%     subplot(5,4,i)
+%     % remove _r and _ from titles
+%     title(strrep(strrep(MuscleNames(muscles(i)),'_r',''),'_',''));
+%     hold on
+%     for j=1:11
+%         plot(p_stance,activations(:,muscles(i),j),'Color',cmap(j,:))
+%     end
+% end
+% 
+% %% Plot hip flexors/extensors activations
+% 
+% figure;
+% title('Hip Muscle Activations')
+% %list of muscle numbers to include
+% muscles=[14,15,19,4];
+% p_stance = (time-0.6)./(1.43-0.6);
+% cmap=jet(11);
+% 
+% for i=1:length(muscles)
+%     subplot(1,4,i)
+%     xlabel('Percent Stance Phase')
+%     if i==1
+%         ylabel('Activation')
+%     end
+%     % remove _r and _ from titles
+%     title(strrep(strrep(MuscleNames(muscles(i)),'_r',''),'_',''));
+%     hold on
+%     for j=1:11
+%         plot(p_stance,activations(:,muscles(i),j),'Color',cmap(j,:))
+%     end
+% end
+% 
+% %% Plot ankle flexors/extensors activations
+% 
+% figure;
+% %list of muscle numbers to include
+% muscles=[21,22,23,24];
+% p_stance = (time-0.6)./(1.43-0.6);
+% cmap=jet(11);
+% 
+% for i=1:length(muscles)
+%     subplot(1,4,i)
+%     xlabel('Percent Stance Phase')
+%     if i==1
+%         ylabel('Activation')
+%     end
+%     % remove _r and _ from titles
+%     title(strrep(strrep(MuscleNames(muscles(i)),'_r',''),'_',''));
+%     hold on
+%     for j=1:11
+%         plot(p_stance,activations(:,muscles(i),j),'Color',cmap(j,:))
+%     end
+% end
+% 
+% %% Plot high power activations
+% 
+% figure;
+% %list of muscle numbers to include
+% muscles=[7,12];
+% p_stance = (time-0.6)./(1.43-0.6);
+% cmap=jet(11);
+% 
+% for i=1:length(muscles)
+%     subplot(1,2,i)
+%     % remove _r and _ from titles
+%     title(strrep(strrep(MuscleNames(muscles(i)),'_r',''),'_',''));
+%     xlabel('Percent Stance Phase')
+%     ylabel('Activation')
+%     hold on
+%     for j=1:11
+%         plot(p_stance,activations(:,muscles(i),j),'Color',cmap(j,:),'LineWidth',1)
+%     end
+% end
