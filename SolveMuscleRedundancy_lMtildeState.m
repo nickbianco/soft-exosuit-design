@@ -223,23 +223,32 @@ auxdata.finaltime = tf;
 umin = e_min*ones(1,auxdata.NMuscles); umax = e_max*ones(1,auxdata.NMuscles);
 vMtildemin = vMtilde_min*ones(1,auxdata.NMuscles); vMtildemax = vMtilde_max*ones(1,auxdata.NMuscles);
 aTmin = -1*ones(1,auxdata.Ndof); aTmax = 1*ones(1,auxdata.Ndof);
-bounds.phase.control.lower = [umin aTmin vMtildemin]; bounds.phase.control.upper = [umax aTmax vMtildemax];
-% States bunds
+if strcmp(study{2},'HipAnkle') 
+    aDmin = 0; aDmax = 1;
+    control_bounds_lower = [umin aTmin vMtildemin aDmin];
+    control_bounds_upper = [umax aTmax vMtildemax aDmax];
+else
+    control_bounds_lower = [umin aTmin vMtildemin];
+    control_bounds_upper = [umax aTmax vMtildemax];
+end
+bounds.phase.control.lower = control_bounds_lower; bounds.phase.control.upper = control_bounds_upper;
+
+% States bounds
 actMin = a_min*ones(1,auxdata.NMuscles); actMax = a_max*ones(1,auxdata.NMuscles);
 lMtildemin = lMtilde_min*ones(1,auxdata.NMuscles); lMtildemax = lMtilde_max*ones(1,auxdata.NMuscles);
-if strcmp(study{2},'HipAnkle') 
-    aDmin = zeros(1,auxdata.NMuscles); aDmax = ones(1,auxdata.NMuscles);
-    bounds_lower = [actMin, lMtildemin, aDmin];
-    bounds_upper = [actMax, lMtildemax, aDmax];
-else
-    bounds_lower = [actMin, lMtildemin];
-    bounds_upper = [actMax, lMtildemax];
-end
-bounds.phase.initialstate.lower = bounds_lower; bounds.phase.initialstate.upper = bounds_upper;
-bounds.phase.state.lower = bounds_lower; bounds.phase.state.upper = bounds_upper;
-bounds.phase.finalstate.lower = bounds_lower; bounds.phase.finalstate.upper = bounds_upper;
+states_bounds_lower = [actMin, lMtildemin];
+states_bounds_upper = [actMax, lMtildemax];
+bounds.phase.initialstate.lower = states_bounds_lower; bounds.phase.initialstate.upper = states_bounds_upper;
+bounds.phase.state.lower = states_bounds_lower; bounds.phase.state.upper = states_bounds_upper;
+bounds.phase.finalstate.lower = states_bounds_lower; bounds.phase.finalstate.upper = states_bounds_upper;
 % Integral bounds
 bounds.phase.integral.lower = 0; bounds.phase.integral.upper = 10000*(tf-t0);
+
+% Parameter bounds
+if strcmp(study{2},'HipAnkle')
+    bounds.parameter.lower = -0.2;
+    bounds.parameter.upper = 0.2;
+end
 
 % Path constraints
 HillEquil = zeros(1, auxdata.NMuscles);
@@ -255,13 +264,15 @@ bounds.eventgroup.lower = [pera_lower perlMtilde_lower]; bounds.eventgroup.upper
 % Initial guess
 N = length(DatStore.time);
 guess.phase.time = DatStore.time;
-guess.phase.control = [DatStore.SoAct DatStore.SoRAct./150 0.01*ones(N,auxdata.NMuscles)];
+guess.phase.control = [DatStore.SoAct DatStore.SoRAct./150 0.01*ones(N,auxdata.NMuscles) 0.5*ones(N,1)];
 guess.phase.state =  [DatStore.SoAct ones(N,auxdata.NMuscles)];
 guess.phase.integral = 0;
+if strcmp(study{2},'HipAnkle')
+    guess.parameter = 0;
+end
 
 % Empty exosuit torque data structure
 DatStore.T_exo = zeros(length(DatStore.time),auxdata.Ndof);
-DatStore.Fopt_exo = zeros(auxdata.Ndof,1);
 
 if strcmp(study{2},'Quinlivan2017')
     % Exosuit moment curves
@@ -280,14 +291,22 @@ if strcmp(study{2},'Quinlivan2017')
         for dof = 1:auxdata.Ndof
             if strcmp('ankle_angle_r', DatStore.DOFNames{dof})
                 % Negative to match ankle_angle_r coord convention
-                DatStore.T_exo(:,dof) = -interp1(exoTime, exoAnkleMoment, DatStore.time);
+                DatStore.T_exo(:,dof) = -interp1(exoTime, exoAnkleMoment, DatStore.time);    
             elseif strcmp('hip_flexion_r', DatStore.DOFNames{dof})
                 % Positive to match hip_flexion_r coord convention
-                DatStore.T_exo(:,dof) = interp1(exoTime, exoHipMoment, DatStore.time);
+                DatStore.T_exo(:,dof) = interp1(exoTime, exoHipMoment, DatStore.time);                
             end
         end
     end
 end
+
+% Force peaks
+DatStore.Fopt_exo = zeros(auxdata.Ndof,1);
+
+% "Tradeoff" struct
+%  +/- 1 for the two joints you are investigating
+%  zeros for everything else
+DatStore.tradeoff = zeros(auxdata.Ndof,1);
 
 if strcmp(study{2},'HipAnkle') 
     % Exosuit moment curves
@@ -304,12 +323,17 @@ if strcmp(study{2},'HipAnkle')
             if strcmp('ankle_angle_r', DatStore.DOFNames{dof})
                 % Negative to match ankle_angle_r coord convention
                 DatStore.Fopt_exo(dof) = -exoAnkleForce;
+                DatStore.tradeoff = -1;
             elseif strcmp('hip_flexion_r', DatStore.DOFNames{dof})
                 % Positive to match hip_flexion_r coord convention
                 DatStore.Fopt_exo(dof) = exoHipForce;
+                DatStore.tradeoff = 1;
             end
         end
     end
+    
+    auxdata.Fopt_exo = DatStore.Fopt_exo;
+    auxdata.tradeoff = DatStore.tradeoff;
 end
 
 % Spline structures
