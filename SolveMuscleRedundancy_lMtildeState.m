@@ -329,11 +329,11 @@ if strcmp(study{2},'HipAnkle')
             if strcmp('ankle_angle_r', DatStore.DOFNames{dof})
                 % Negative to match ankle_angle_r coord convention
                 DatStore.Fopt_exo(dof) = -exoAnkleForce;
-                DatStore.tradeoff = -1;
+                DatStore.tradeoff(dof) = -1;
             elseif strcmp('hip_flexion_r', DatStore.DOFNames{dof})
                 % Positive to match hip_flexion_r coord convention
                 DatStore.Fopt_exo(dof) = exoHipForce;
-                DatStore.tradeoff = 1;
+                DatStore.tradeoff(dof) = 1;
             end
         end
     end

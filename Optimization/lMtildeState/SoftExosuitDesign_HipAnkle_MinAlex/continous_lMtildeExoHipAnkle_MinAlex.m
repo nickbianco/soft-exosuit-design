@@ -1,4 +1,4 @@
-function phaseout = continous_lMtildeExoQuinlivan2017_MinAlex(input)
+function phaseout = continous_lMtildeExoHipAnkle_MinAlex(input)
 
 % Get input data
 NMuscles        = input.auxdata.NMuscles;
@@ -8,26 +8,33 @@ tauDeact        = input.auxdata.tauDeact;
 params          = input.auxdata.params;
 splinestruct    = input.auxdata.splinestruct;
 numColPoints    = size(input.phase.state,1);
+Fopt_exo        = input.auxdata.Fopt_exo;
 
 % Get controls
 e       = input.phase.control(:,1:NMuscles);
 aT      = input.phase.control(:,NMuscles+1:NMuscles+Ndof);
-vMtilde = input.phase.control(:,NMuscles+Ndof+1:end);
+vMtilde = input.phase.control(:,NMuscles+Ndof+1:end-1);
+aD      = input.phase.control(:,end);
 
 % Get states
 a       = input.phase.state(:,1:NMuscles);
 lMtilde = input.phase.state(:,NMuscles+1:end);
 
+% Get tradeoff parameter info
+alpha    = input.phase.parameter;
+tradeoff = input.auxdata.tradeoff;
+
 % PATH CONSTRAINTS
 % Hill-equilibrium constraint
-[Hilldiff, F] = ForceEquilibrium_lMtildeStateExoQuinlivan2017_MinAlex(a,lMtilde,vMtilde,splinestruct.LMT,params,input.auxdata.Fvparam,input.auxdata.Fpparam,input.auxdata.Faparam);
+[Hilldiff, F] = ForceEquilibrium_lMtildeStateExoHipAnkle_MinAlex(a,lMtilde,vMtilde,splinestruct.LMT,params,input.auxdata.Fvparam,input.auxdata.Fpparam,input.auxdata.Faparam);
 
 % Moments constraint
 Topt = 150;
+r = 0.1;
 Tdiff = zeros(numColPoints,Ndof);
 for dof = 1:Ndof
     T_exp=splinestruct.ID(:,dof);
-    T_exo=splinestruct.EXO(:,dof);
+    T_exo= r*Fopt_exo(dof)*aD.*(ones(numColPoints,1)+tradeoff(dof)*alpha);
     index_sel=(dof-1)*(NMuscles)+1:(dof-1)*(NMuscles)+NMuscles;
     T_sim=sum(F.*splinestruct.MA(:,index_sel),2) + Topt*aT(:,dof) + T_exo;
     Tdiff(:,dof) =  (T_exp-T_sim);
@@ -64,7 +71,7 @@ v = 1.2;  % m/s
 
 wCOT = 1/(m*g*v); % Weight by cost of transport
 w1 = 1000;
-phaseout.integrand = wCOT.*sum(Edot,2) + w1.*sum(aT.^2,2);
+phaseout.integrand = wCOT.*sum(Edot,2) + sum(a.^2,2) + sum(e.^2,2) + w1.*sum(aT.^2,2);
 
 
 

@@ -13,8 +13,8 @@ Fopt_exo        = input.auxdata.Fopt_exo;
 % Get controls
 e       = input.phase.control(:,1:NMuscles);
 aT      = input.phase.control(:,NMuscles+1:NMuscles+Ndof);
-vMtilde = input.phase.control(:,NMuscles+Ndof+1:end);
-aD      = input.phase.control(:,1);
+vMtilde = input.phase.control(:,NMuscles+Ndof+1:end-1);
+aD      = input.phase.control(:,end);
 
 % Get states
 a       = input.phase.state(:,1:NMuscles);
@@ -34,7 +34,7 @@ r = 0.1;
 Tdiff = zeros(numColPoints,Ndof);
 for dof = 1:Ndof
     T_exp=splinestruct.ID(:,dof);
-    T_exo= Fopt_exo(dof)*aD*r*(1+tradeoff(dof)*alpha);
+    T_exo= r*Fopt_exo(dof)*aD.*(ones(numColPoints,1)+tradeoff(dof)*alpha);
     index_sel=(dof-1)*(NMuscles)+1:(dof-1)*(NMuscles)+NMuscles;
     T_sim=sum(F.*splinestruct.MA(:,index_sel),2) + Topt*aT(:,dof) + T_exo;
     Tdiff(:,dof) =  (T_exp-T_sim);
