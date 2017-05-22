@@ -132,7 +132,7 @@ for x=1:11
     norm_average_wholebody_energy_rate(x) = mean(wholebody_energy_rate) / bodyMass;
     
     % Muscle activations
-    h1 = figure('Name','Muscle Activations');
+    h1 = figure(1);
     for m = 1:numMuscles
         subplot(6,4,m)
         title(MuscleNames(m),'interpreter', 'none')
@@ -141,7 +141,7 @@ for x=1:11
     end
     
     % Normalized fiber length
-    h2 = figure('Name','Normalized Fiber Length');
+    h2 = figure(2);
     for m = 1:numMuscles
         subplot(6,4,m)
         title(MuscleNames(m),'interpreter', 'none')
@@ -150,7 +150,7 @@ for x=1:11
     end
     
     % Normalized fiber velocity
-    h3 = figure('Normalized Fiber Velocity');
+    h3 = figure(3);
     for m = 1:numMuscles
         subplot(6,4,m)
         title(MuscleNames(m),'interpreter', 'none')

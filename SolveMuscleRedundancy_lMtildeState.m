@@ -319,20 +319,18 @@ if strcmp(study{2},'HipAnkle')
     ExoCurves = load('/Examples/SoftExosuitDesign/HipAnkle/ExoCurves.mat');
     % Peaks are body mass normalized so multiply by model mass
     exoAnkleForcePeaks = ExoCurves.af_peak * Misc.model_mass;
-    exoHipForcePeaks = ExoCurves.hf_peak * Misc.model_mass;
 
     % Interpolate exosuit moments to match data
     if Misc.exo_force_level    
-        exoAnkleForce = exoAnkleForcePeaks(Misc.exo_force_level);
-        exoHipForce = exoHipForcePeaks(Misc.exo_force_level);
+        exoForce = exoAnkleForcePeaks(Misc.exo_force_level);
         for dof = 1:auxdata.Ndof
             if strcmp('ankle_angle_r', DatStore.DOFNames{dof})
                 % Negative to match ankle_angle_r coord convention
-                DatStore.Fopt_exo(dof) = -exoAnkleForce;
+                DatStore.Fopt_exo(dof) = -exoForce;
                 DatStore.tradeoff(dof) = -1;
             elseif strcmp('hip_flexion_r', DatStore.DOFNames{dof})
                 % Positive to match hip_flexion_r coord convention
-                DatStore.Fopt_exo(dof) = exoHipForce;
+                DatStore.Fopt_exo(dof) = exoForce;
                 DatStore.tradeoff(dof) = 1;
             end
         end
