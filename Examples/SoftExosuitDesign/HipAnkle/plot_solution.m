@@ -132,7 +132,7 @@ for x=1:11
     norm_average_wholebody_energy_rate(x) = mean(wholebody_energy_rate) / bodyMass;
     
     % Muscle activations
-    h1 = figure(1);
+    h1 = figure('Name','Muscle Activations');
     for m = 1:numMuscles
         subplot(6,4,m)
         title(MuscleNames(m),'interpreter', 'none')
@@ -141,7 +141,7 @@ for x=1:11
     end
     
     % Normalized fiber length
-    h2 = figure(2);
+    h2 = figure('Name','Normalized Fiber Length');
     for m = 1:numMuscles
         subplot(6,4,m)
         title(MuscleNames(m),'interpreter', 'none')
@@ -150,7 +150,7 @@ for x=1:11
     end
     
     % Normalized fiber velocity
-    h3 = figure(3);
+    h3 = figure('Normalized Fiber Velocity');
     for m = 1:numMuscles
         subplot(6,4,m)
         title(MuscleNames(m),'interpreter', 'none')
@@ -165,7 +165,7 @@ for x=1:11
     bar(x,alpha)
     hold on
     title('Tradeoff parameter')
-    axis([0 12 -0.3 0.3])
+    axis([0 12 -1 1])
     
     subplot(2,2,3)
     plot(time,aD,'Color',cmap(x,:),'LineWidth',1.5)
