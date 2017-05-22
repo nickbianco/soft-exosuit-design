@@ -252,8 +252,8 @@ bounds.phase.integral.lower = 0; bounds.phase.integral.upper = 10000*(tf-t0);
 
 % Parameter bounds
 if strcmp(study{2},'HipAnkle')
-    bounds.parameter.lower = -0.2;
-    bounds.parameter.upper = 0.2;
+    bounds.parameter.lower = -1.0;
+    bounds.parameter.upper = 1.0;
 end
 
 % Path constraints

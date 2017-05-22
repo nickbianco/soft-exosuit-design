@@ -2,7 +2,7 @@
 import org.opensim.modeling.*
 load ExoCurves.mat
 
-cost=2;
+cost=1;
 switch cost
     case 1
         costdir = 'Exc_Act';
@@ -14,7 +14,7 @@ cmap = zeros(11,3);
 cmap(1,:) = [0 0 0];
 cmap(2:end,:) = jet(10);
 
-for x=1
+for x=1:11
 
     filename=strcat('forceLevel',int2str(x-1),'.mat');
     load(fullfile(costdir,filename))
