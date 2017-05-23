@@ -229,17 +229,22 @@ auxdata.finaltime = tf;
 umin = e_min*ones(1,auxdata.NMuscles); umax = e_max*ones(1,auxdata.NMuscles);
 vMtildemin = vMtilde_min*ones(1,auxdata.NMuscles); vMtildemax = vMtilde_max*ones(1,auxdata.NMuscles);
 aTmin = -1*ones(1,auxdata.Ndof); aTmax = 1*ones(1,auxdata.Ndof);
-if strcmp(study{2},'HipAnkle') 
-    aDmin = 0; aDmax = 1;
-    control_bounds_lower = [umin aTmin vMtildemin aDmin];
-    control_bounds_upper = [umax aTmax vMtildemax aDmax];
-elseif strcmp(study{2},'HipExtHipAbd') 
-    aDmin = 0; aDmax = 1;
-    control_bounds_lower = [umin aTmin vMtildemin aDmin];
-    control_bounds_upper = [umax aTmax vMtildemax aDmax];
-else
-    control_bounds_lower = [umin aTmin vMtildemin];
-    control_bounds_upper = [umax aTmax vMtildemax];
+switch study{2}
+    case 'HipAnkle'
+        aDmin = 0; aDmax = 1;
+        control_bounds_lower = [umin aTmin vMtildemin aDmin];
+        control_bounds_upper = [umax aTmax vMtildemax aDmax];
+    case 'HipKneeAnkle'
+        aDmin = 0; aDmax = 1;
+        control_bounds_lower = [umin aTmin vMtildemin aDmin];
+        control_bounds_upper = [umax aTmax vMtildemax aDmax];
+    case 'HipExtHipAbd'
+        aDmin = 0; aDmax = 1;
+        control_bounds_lower = [umin aTmin vMtildemin aDmin];
+        control_bounds_upper = [umax aTmax vMtildemax aDmax];
+    otherwise
+        control_bounds_lower = [umin aTmin vMtildemin];
+        control_bounds_upper = [umax aTmax vMtildemax];
 end
 bounds.phase.control.lower = control_bounds_lower; bounds.phase.control.upper = control_bounds_upper;
 
@@ -255,12 +260,18 @@ bounds.phase.finalstate.lower = states_bounds_lower; bounds.phase.finalstate.upp
 bounds.phase.integral.lower = 0; bounds.phase.integral.upper = 10000*(tf-t0);
 
 % Parameter bounds
-if strcmp(study{2},'HipAnkle')
-    bounds.parameter.lower = -1.0;
-    bounds.parameter.upper = 1.0;
-elseif strcmp(study{2},'HipExtHipAbd')
-    bounds.parameter.lower = -1.0;
-    bounds.parameter.upper = 1.0;
+switch study{2}
+    case 'HipAnkle'
+        bounds.parameter.lower = -1.0;
+        bounds.parameter.upper = 1.0;
+    case 'HipKneeAnkle'
+        bounds.parameter.lower = -1.0;
+        bounds.parameter.upper = 1.0;
+    case 'HipExtHipAbd'
+        bounds.parameter.lower = -1.0;
+        bounds.parameter.upper = 1.0;
+    otherwise
+        % No parameter case
 end
 
 % Path constraints
@@ -277,18 +288,41 @@ bounds.eventgroup.lower = [pera_lower perlMtilde_lower]; bounds.eventgroup.upper
 % Initial guess
 N = length(DatStore.time);
 guess.phase.time = DatStore.time;
+switch study{2}
+    case 'HipAnkle'
+        guess.phase.control = [DatStore.SoAct DatStore.SoRAct./150 0.01*ones(N,auxdata.NMuscles) 0.5*ones(N,1)];
+    case 'HipKneeAnkle'
+        guess.phase.control = [DatStore.SoAct DatStore.SoRAct./150 0.01*ones(N,auxdata.NMuscles) 0.5*ones(N,1)];
+    case 'HipExtHipAbd'
+        guess.phase.control = [DatStore.SoAct DatStore.SoRAct./150 0.01*ones(N,auxdata.NMuscles) 0.5*ones(N,1)];
+    otherwise
+        guess.phase.control = [DatStore.SoAct DatStore.SoRAct./150 0.01*ones(N,auxdata.NMuscles)];
+end
 guess.phase.control = [DatStore.SoAct DatStore.SoRAct./150 0.01*ones(N,auxdata.NMuscles) 0.5*ones(N,1)];
 guess.phase.state =  [DatStore.SoAct ones(N,auxdata.NMuscles)];
 guess.phase.integral = 0;
-if strcmp(study{2},'HipAnkle')
-    guess.parameter = 0;
-elseif strcmp(study{2},'HipExtHipAbd')
-    guess.parameter = 0;
+switch study{2}
+    case 'HipAnkle'
+        guess.parameter = 0;
+    case 'HipKneeAnkle'
+        guess.parameter = 0;
+    case 'HipExtHipAbd'
+        guess.parameter = 0;
+    otherwise
+        % No parameter case
 end
 
-% Empty exosuit torque data structure
+% Empty exosuit force and torque data structures
 DatStore.T_exo = zeros(length(DatStore.time),auxdata.Ndof);
+DatStore.Fopt_exo = zeros(auxdata.Ndof,1);
+DatStore.Fopt_exo_knee = zeros(auxdata.Ndof,1);
 
+% "Tradeoff" struct
+%  +/- 1 for the two joints you are investigating
+%  zeros for everything else
+DatStore.tradeoff = zeros(auxdata.Ndof,1);
+
+% Reproduce Quinlivan et al. 2017 study
 if strcmp(study{2},'Quinlivan2017')
     % Exosuit moment curves
     ExoCurves = load(['/Examples/SoftExosuitDesign/Quinlivan2017/' folder '/ExoCurves.mat']);
@@ -315,14 +349,8 @@ if strcmp(study{2},'Quinlivan2017')
     end
 end
 
-% Force peaks
-DatStore.Fopt_exo = zeros(auxdata.Ndof,1);
-
-% "Tradeoff" struct
-%  +/- 1 for the two joints you are investigating
-%  zeros for everything else
-DatStore.tradeoff = zeros(auxdata.Ndof,1);
-
+% Given one actuator, compare tradeoff between hip flexion and ankle 
+%  plantarflexion assistance
 if strcmp(study{2},'HipAnkle') 
     % Exosuit moment curves
     ExoCurves = load('/Examples/SoftExosuitDesign/HipAnkle/ExoCurves.mat');
@@ -349,6 +377,39 @@ if strcmp(study{2},'HipAnkle')
     auxdata.tradeoff = DatStore.tradeoff;
 end
 
+% Given one actuator, compare tradeoff between hip flexion and ankle 
+% plantarflexion assistance. Also allow moment arm at knee.
+if strcmp(study{2},'HipKneeAnkle') 
+    % Exosuit moment curves
+    ExoCurves = load('/Examples/SoftExosuitDesign/HipAnkle/ExoCurves.mat');
+    % Peaks are body mass normalized so multiply by model mass
+    exoAnkleForcePeaks = ExoCurves.af_peak * Misc.model_mass;
+
+    % Interpolate exosuit moments to match data
+    if Misc.exo_force_level    
+        exoForce = exoAnkleForcePeaks(Misc.exo_force_level);
+        for dof = 1:auxdata.Ndof
+            if strcmp('ankle_angle_r', DatStore.DOFNames{dof})
+                % Negative to match ankle_angle_r coord convention
+                DatStore.Fopt_exo(dof) = -exoForce;
+                DatStore.tradeoff(dof) = -1;
+            elseif strcmp('hip_flexion_r', DatStore.DOFNames{dof})
+                % Positive to match hip_flexion_r coord convention
+                DatStore.Fopt_exo(dof) = exoForce;
+                DatStore.tradeoff(dof) = 1;
+            elseif strcmp('knee_angle_r', DatStore.DOFNames{dof})
+                DatStore.Fopt_exo_knee(dof) = exoForce;
+            end
+        end
+    end
+    
+    auxdata.Fopt_exo = DatStore.Fopt_exo;
+    auxdata.Fopt_exo_knee = DatStore.Fopt_exo_knee;
+    auxdata.tradeoff = DatStore.tradeoff;
+end
+
+% Given one actuator, compare tradeoff between hip extension and hip 
+% abduction assistance
 if strcmp(study{2},'HipExtHipAbd') 
     % Exosuit moment curves
     ExoCurves = load('/Examples/SoftExosuitDesign/HipAnkle/ExoCurves.mat');
