@@ -233,6 +233,10 @@ if strcmp(study{2},'HipAnkle')
     aDmin = 0; aDmax = 1;
     control_bounds_lower = [umin aTmin vMtildemin aDmin];
     control_bounds_upper = [umax aTmax vMtildemax aDmax];
+elseif strcmp(study{2},'HipExtHipAbd') 
+    aDmin = 0; aDmax = 1;
+    control_bounds_lower = [umin aTmin vMtildemin aDmin];
+    control_bounds_upper = [umax aTmax vMtildemax aDmax];
 else
     control_bounds_lower = [umin aTmin vMtildemin];
     control_bounds_upper = [umax aTmax vMtildemax];
@@ -252,6 +256,9 @@ bounds.phase.integral.lower = 0; bounds.phase.integral.upper = 10000*(tf-t0);
 
 % Parameter bounds
 if strcmp(study{2},'HipAnkle')
+    bounds.parameter.lower = -1.0;
+    bounds.parameter.upper = 1.0;
+elseif strcmp(study{2},'HipExtHipAbd')
     bounds.parameter.lower = -1.0;
     bounds.parameter.upper = 1.0;
 end
@@ -274,6 +281,8 @@ guess.phase.control = [DatStore.SoAct DatStore.SoRAct./150 0.01*ones(N,auxdata.N
 guess.phase.state =  [DatStore.SoAct ones(N,auxdata.NMuscles)];
 guess.phase.integral = 0;
 if strcmp(study{2},'HipAnkle')
+    guess.parameter = 0;
+elseif strcmp(study{2},'HipExtHipAbd')
     guess.parameter = 0;
 end
 
@@ -339,6 +348,33 @@ if strcmp(study{2},'HipAnkle')
     auxdata.Fopt_exo = DatStore.Fopt_exo;
     auxdata.tradeoff = DatStore.tradeoff;
 end
+
+if strcmp(study{2},'HipExtHipAbd') 
+    % Exosuit moment curves
+    ExoCurves = load('/Examples/SoftExosuitDesign/HipAnkle/ExoCurves.mat');
+    % Peaks are body mass normalized so multiply by model mass
+    exoAnkleForcePeaks = ExoCurves.af_peak * Misc.model_mass;
+
+    % Interpolate exosuit moments to match data
+    if Misc.exo_force_level    
+        exoForce = exoAnkleForcePeaks(Misc.exo_force_level);
+        for dof = 1:auxdata.Ndof
+            if strcmp('hip_flexion_r', DatStore.DOFNames{dof})
+                % Negative to match hip_flexion_r coord convention
+                DatStore.Fopt_exo(dof) = -exoForce;
+                DatStore.tradeoff(dof) = 1;
+            elseif strcmp('hip_adduction_r',DatStore.DOFNames{dof})
+                % Negative to match hip_adduction_r coord convention
+                DatStore.Fopt_exo(dof) = -exoForce;
+                DatStore.tradeoff(dof) = -1;
+            end
+        end
+    end
+    
+    auxdata.Fopt_exo = DatStore.Fopt_exo;
+    auxdata.tradeoff = DatStore.tradeoff;
+end
+
 
 % Spline structures
 for dof = 1:auxdata.Ndof

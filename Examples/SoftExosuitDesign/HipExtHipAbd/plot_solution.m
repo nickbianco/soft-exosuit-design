@@ -17,7 +17,7 @@ cmap(2:end,:) = jet(10);
 for x=1:11
 
     filename=strcat('forceLevel',int2str(x-1),'.mat');
-    load(fullfile('HipAnkle',costdir,filename))
+    load(fullfile('HipExtHipAbd',costdir,filename))
 
     numDOFs = DatStore.nDOF;
     numMuscles = DatStore.nMuscles;
@@ -35,17 +35,17 @@ for x=1:11
     jointAngles = pi / 180. * interp1(expTime, qExp, time);
     T_exp = DatStore.T_exp;
     Fopt_exo = DatStore.Fopt_exo;
-    ankleIdx = strcmp('ankle_angle_r',DatStore.DOFNames);
-    anklePeakForce = Fopt_exo(ankleIdx);
-    ankleID = T_exp(:,ankleIdx);
-    hipIdx = strcmp('hip_flexion_r',DatStore.DOFNames);
-    hipPeakForce = Fopt_exo(hipIdx);
-   	hipID = T_exp(:,hipIdx);
+    hipFlexIdx = strcmp('hip_flexion_r',DatStore.DOFNames);
+    hipFlexPeakForce = Fopt_exo(hipFlexIdx);
+    hipFlexID = T_exp(:,hipFlexIdx);
+    hipAddIdx = strcmp('hip_adduction_r',DatStore.DOFNames);
+    hipAddPeakForce = Fopt_exo(hipAddIdx);
+   	hipAddID = T_exp(:,hipAddIdx);
     
     % Interpolate inverse dynamics moments
-    timeID = linspace(0.6,1.4,length(hipID));
-    hipID = interp1(timeID,hipID,time);
-    ankleID = interp1(timeID,ankleID,time);
+    timeID = linspace(0.6,1.4,length(hipFlexID));
+    hipFlexID = interp1(timeID,hipFlexID,time);
+    hipAddID = interp1(timeID,hipAddID,time);
     
     % Extract parts of the solution related to the device.
     control = OptInfo.result.solution.phase.control;
@@ -165,7 +165,7 @@ for x=1:11
     bar(x,alpha)
     hold on
     title('Tradeoff parameter')
-    axis([0 12 -1 1])
+    axis([0 12 -1.2 1.2])
     
     subplot(2,2,3)
     plot(time,aD,'Color',cmap(x,:),'LineWidth',1.5)
@@ -173,19 +173,17 @@ for x=1:11
     title('Device control')
     
     subplot(2,2,2)
-    plot(time,hipPeakForce*aD*r*(1+tradeoff(hipIdx)*alpha),'Color',cmap(x,:),'LineWidth',1.5)
+    plot(time,-hipFlexPeakForce*aD*r*(1+tradeoff(hipFlexIdx)*alpha),'Color',cmap(x,:),'LineWidth',1.5)
     hold on
-    plot(time,hipID,'k--')
-    title('Hip Moment')
+    plot(time,-hipFlexID,'k--')
+    title('Hip Extension Moment')
     
     subplot(2,2,4)
-    plot(time,anklePeakForce*aD*r*(1+tradeoff(ankleIdx)*alpha),'Color',cmap(x,:),'LineWidth',1.5)
+    plot(time,-hipAddPeakForce*aD*r*(1+tradeoff(hipAddIdx)*alpha),'Color',cmap(x,:),'LineWidth',1.5)
     hold on
-    plot(time,ankleID,'k--')
-    title('Ankle Moment')
+    plot(time,-hipAddID,'k--')
+    title('Hip Abduction Moment')
 end
-
-folder = [Misc.costfun '_Hip_Shift'];
 
 %% Plot bar graphs
 
