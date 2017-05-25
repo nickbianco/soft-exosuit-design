@@ -16,3 +16,10 @@ out.log
 
 # MATLAB autosave files
 *.asv
+
+# Powerpoint files
+*.pptx
+
+# Vector image files
+*.emf
+

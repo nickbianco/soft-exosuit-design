@@ -1,4 +1,6 @@
 %% Calculate metabolic cost
+clear all; close all; clc;
+
 import org.opensim.modeling.*
 load ExoCurves.mat
 
@@ -35,9 +37,13 @@ for x=1:11
     jointAngles = pi / 180. * interp1(expTime, qExp, time);
     T_exp = DatStore.T_exp;
     Fopt_exo = DatStore.Fopt_exo;
+    Fopt_exo_knee = DatStore.Fopt_exo_knee;
     ankleIdx = strcmp('ankle_angle_r',DatStore.DOFNames);
     anklePeakForce = Fopt_exo(ankleIdx);
     ankleID = T_exp(:,ankleIdx);
+    kneeIdx = strcmp('knee_angle_r',DatStore.DOFNames);
+    kneePeakForce = Fopt_exo_knee(kneeIdx);
+    kneeID = T_exp(:,kneeIdx);
     hipIdx = strcmp('hip_flexion_r',DatStore.DOFNames);
     hipPeakForce = Fopt_exo(hipIdx);
    	hipID = T_exp(:,hipIdx);
@@ -45,6 +51,7 @@ for x=1:11
     % Interpolate inverse dynamics moments
     timeID = linspace(0.6,1.4,length(hipID));
     hipID = interp1(timeID,hipID,time);
+    kneeID = interp1(timeID,kneeID,time);
     ankleID = interp1(timeID,ankleID,time);
     
     % Extract parts of the solution related to the device.
@@ -161,28 +168,41 @@ for x=1:11
     % Device control and tradeoff parameter solution
     r = 0.1;
     h4 = figure(4);
-    subplot(2,2,1)
+    subplot(6,2,[1 3 5])
     bar(x,alpha)
     hold on
     title('Tradeoff parameter')
-    axis([0 12 -1 1])
+    axis([0 12 -1.5 1.5])
+    yticks([-1 -0.5 0 0.5 1])
+    text(1,1.25,'Knee Ext. / Hip Flex.','FontAngle','italic')
+    text(1,-1.25,'Knee Flex. / Ankle PF','FontAngle','italic')
+    %yticklabels({'Knee Flexion';'Ankle Plantarflexion'}) ,{'Knee Extension','HipFlexion'}})
+    %set(gca,'YTicks',[-1 1],'YTickLabels', ...
+     %  {'Knee Flexion';'Ankle Plantarflexion'},{'Knee Extension','HipFlexion'})
     
-    subplot(2,2,3)
+    subplot(6,2,[7 9 11])
     plot(time,aD,'Color',cmap(x,:),'LineWidth',1.5)
     hold on
     title('Device control')
     
-    subplot(2,2,2)
+    subplot(6,2,[2 4])
     plot(time,hipPeakForce*aD*r*(1+tradeoff(hipIdx)*alpha),'Color',cmap(x,:),'LineWidth',1.5)
     hold on
     plot(time,hipID,'k--')
     title('Hip Moment')
     
-    subplot(2,2,4)
+    subplot(6,2,[6 8])
+    plot(time,kneePeakForce*aD*r*alpha,'Color',cmap(x,:),'LineWidth',1.5)
+    hold on
+    plot(time,kneeID,'k--')
+    title('Knee Moment')
+    
+    subplot(6,2,[10 12])
     plot(time,anklePeakForce*aD*r*(1+tradeoff(ankleIdx)*alpha),'Color',cmap(x,:),'LineWidth',1.5)
     hold on
     plot(time,ankleID,'k--')
     title('Ankle Moment')
+   
 end
 
 folder = [Misc.costfun '_Hip_Shift'];
