@@ -1,4 +1,4 @@
-function phaseout = continous_lMtildeExoHipAnkle_MinAlex(input)
+function phaseout = continous_lMtildeExoHipAnkle_Exc_Act_MinAlex(input)
 
 % Get input data
 NMuscles        = input.auxdata.NMuscles;
@@ -26,7 +26,7 @@ tradeoff = input.auxdata.tradeoff;
 
 % PATH CONSTRAINTS
 % Hill-equilibrium constraint
-[Hilldiff, F] = ForceEquilibrium_lMtildeStateExoHipAnkle_MinAlex(a,lMtilde,vMtilde,splinestruct.LMT,params,input.auxdata.Fvparam,input.auxdata.Fpparam,input.auxdata.Faparam);
+[Hilldiff, F] = ForceEq_lMtildeStateExoHipAnkle_Exc_Act_MinAlex(a,lMtilde,vMtilde,splinestruct.LMT,params,input.auxdata.Fvparam,input.auxdata.Fpparam,input.auxdata.Faparam);
 
 % Moments constraint
 Topt = 150;
@@ -71,7 +71,7 @@ v = 1.2;  % m/s
 
 wCOT = 1/(m*g*v); % Weight by cost of transport
 w1 = 1000;
-phaseout.integrand = wCOT.*sum(Edot,2) + w1.*sum(aT.^2,2);
+phaseout.integrand = wCOT.*sum(Edot,2) + sum(a.^2,2) + sum(e.^2,2) + w1.*sum(aT.^2,2);
 
 
 

@@ -2,12 +2,14 @@
 import org.opensim.modeling.*
 load ExoCurves.mat
 
-cost=1;
+cost=3;
 switch cost
     case 1
         costdir = 'Exc_Act';
     case 2
         costdir = 'MinAlex';
+    case 3
+        costdir = 'Exc_Act_MinAlex';
 end
 
 cmap = zeros(11,3);
