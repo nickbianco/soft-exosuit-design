@@ -1,8 +1,11 @@
 %% Calculate metabolic cost
+clear all; close all; clc;
 import org.opensim.modeling.*
 load ExoCurves.mat
 
-cost=3;
+study = 'HipAnkle';
+
+cost=1;
 switch cost
     case 1
         costdir = 'Exc_Act';
@@ -16,10 +19,14 @@ cmap = zeros(11,3);
 cmap(1,:) = [0 0 0];
 cmap(2:end,:) = jet(10);
 
+% Peak assistive force
+peak_force=am_peak.*(75/.6695);
+
+
 for x=1:11
 
     filename=strcat('forceLevel',int2str(x-1),'.mat');
-    load(fullfile('HipAnkle',costdir,filename))
+    load(fullfile(costdir,filename))
 
     numDOFs = DatStore.nDOF;
     numMuscles = DatStore.nMuscles;
@@ -138,8 +145,35 @@ for x=1:11
     for m = 1:numMuscles
         subplot(6,4,m)
         title(MuscleNames(m),'interpreter', 'none')
-        plot(time,a(:,m),'Color',cmap(x,:),'LineWidth',1.2)
         hold on
+        if x==1
+            plot(time,a(:,m),'k--','LineWidth',1.5)
+        else
+            plot(time,a(:,m),'Color',cmap(x,:),'LineWidth',1.2)
+        end
+    end
+    
+    % Desired activations
+    h7 = figure(7);
+    muscles = {'iliacus_r','glut_max2_r','bifemlh_r','rect_fem_r', ...
+               'med_gas_r','soleus_r'};
+    muscleNamesFull = {'Iliacus','Gluteus Maximus','Biceps Femoris Long Head',...
+                       'Rectus Femoris','Medial Gastrocnemius', ...
+                       'Soleus'};
+    for i = 1:length(muscles)
+        for m = 1:numMuscles
+            if strcmp(muscles{i},MuscleNames(m))
+                subplot(3,2,i)
+                title(muscleNamesFull(i),'FontAngle','italic')
+                hold on
+                if x==1
+                    plot(time,a(:,m),'k--','LineWidth',1.5)
+                else
+                    plot(time,a(:,m),'Color',cmap(x,:),'LineWidth',1.2)
+                end
+                axis([0.6 1.4 0 1])
+            end
+        end
     end
     
     % Normalized fiber length
@@ -161,30 +195,52 @@ for x=1:11
     end
     
     % Device control and tradeoff parameter solution
-    r = 0.1;
-    h4 = figure(4);
-    subplot(2,2,1)
-    bar(x,alpha)
-    hold on
-    title('Tradeoff parameter')
-    axis([0 12 -1 1])
-    
-    subplot(2,2,3)
-    plot(time,aD,'Color',cmap(x,:),'LineWidth',1.5)
-    hold on
-    title('Device control')
-    
-    subplot(2,2,2)
-    plot(time,hipPeakForce*aD*r*(1+tradeoff(hipIdx)*alpha),'Color',cmap(x,:),'LineWidth',1.5)
-    hold on
-    plot(time,hipID,'k--')
-    title('Hip Moment')
-    
-    subplot(2,2,4)
-    plot(time,anklePeakForce*aD*r*(1+tradeoff(ankleIdx)*alpha),'Color',cmap(x,:),'LineWidth',1.5)
-    hold on
-    plot(time,ankleID,'k--')
-    title('Ankle Moment')
+    if x>1
+        r = 0.1;
+        h4 = figure(4);
+        subplot(2,1,1)
+        bar(x,alpha,'FaceColor',cmap(x,:))
+        box on
+        hold on
+        title('Tradeoff Parameter','FontAngle','italic')
+        ylabel('$\alpha$','interpreter','latex','FontSize',14)
+        xticks(peak_force)
+        yticks(-1:0.25:1)
+        axis([0 12 -1 1])
+        text(3,0.5,'Hip Flexion','FontAngle','italic')
+        text(3,-0.5,'Ankle Plantarflexion','FontAngle','italic')
+        ax = gca;
+        ax.LineWidth = 1.5;
+        
+        subplot(2,1,2)
+        plot(time,aD,'Color',cmap(x,:),'LineWidth',1.5)
+        box on
+        hold on
+        yticks(0:0.25:1)
+        title('Device Activation','FontAngle','italic')
+        ax = gca;
+        ax.LineWidth = 1.5;
+        
+        h6 = figure(6);
+        subplot(2,1,1)
+        plot(time,hipPeakForce*aD*r*(1+tradeoff(hipIdx)*alpha),'Color',cmap(x,:),'LineWidth',1.5)
+        box on
+        hold on
+        plot(time,hipID,'k-','LineWidth',1.75)
+        title('Hip Moment','FontAngle','italic')
+        ax = gca;
+        ax.LineWidth = 1.5;
+        
+        subplot(2,1,2)
+        plot(time,anklePeakForce*aD*r*(1+tradeoff(ankleIdx)*alpha),'Color',cmap(x,:),'LineWidth',1.5)
+        box on
+        hold on
+        plot(time,ankleID,'k-','LineWidth',1.75)
+        title('Ankle Moment','FontAngle','italic')
+        ax = gca;
+        ax.LineWidth = 1.5;
+        
+    end
 end
 
 folder = [Misc.costfun '_Hip_Shift'];
@@ -196,24 +252,37 @@ for i=1:length(norm_average_wholebody_energy_rate)-1
     norm_average_wholebody_energy_rate(1))/norm_average_wholebody_energy_rate(1)*100;
 end
 
-figure;
+h5 = figure('units','normalized','position',[0 0 0.5 1.0]);
 paper_results=[-3.59,-6.45,-14.79,-22.83];
-color=[[0.498, 0.396, 0.635];[0.258, 0.670, 0.784];[0.596, 0.8, 0.403];[0.968, 0.6, 0.215]];
-ind=am_peak.*(75/.6695);
 
 hold on
 for i = 1:length(paper_results)
-    h=bar(ind(i),paper_results(i));
-    set(h,'FaceColor',color(i,:));
+    h=bar(peak_force(i),paper_results(i));
+    set(h,'FaceColor',[1 1 1]);
     set(h,'BarWidth',10);
+    set(h,'LineWidth',1.5);
 end
 
-plot(ind,p_change,'k--')
-plot(ind,p_change,'k.','MarkerSize',15)
+plot(peak_force,p_change,'k--','LineWidth',1.5)
+box on
+for i = 1:length(p_change)
+    plot(peak_force(i),p_change(i),'o','MarkerSize',10,'MarkerEdgeColor',cmap(i+1,:),'MarkerFaceColor',cmap(i+1,:))
+end
+
 hold off
 ylabel('Change in Metabolic Rate [%]')
 xlabel('Peak Assistive Force [% BW]')
-title('Reduction in Net Metabolic Rate')
+ax = gca;
+ax.LineWidth = 1.5;
+ax.FontSize = 14;
+
+%% Print figures
+
+print(h4,[study '_tradeoff'],'-dpng')
+print(h5,[study '_metabolics'],'-dpng')
+print(h6,[study '_moments'],'-dpng')
+
+
 %% Plot all activations
 % 
 % figure;

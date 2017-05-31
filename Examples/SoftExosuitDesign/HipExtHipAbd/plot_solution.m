@@ -17,7 +17,7 @@ cmap(2:end,:) = jet(10);
 for x=1:11
 
     filename=strcat('forceLevel',int2str(x-1),'.mat');
-    load(fullfile('HipExtHipAbd',costdir,filename))
+    load(fullfile(costdir,filename))
 
     numDOFs = DatStore.nDOF;
     numMuscles = DatStore.nMuscles;
