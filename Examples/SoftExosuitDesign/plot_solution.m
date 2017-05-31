@@ -1,5 +1,6 @@
 %% Calculate metabolic cost
 import org.opensim.modeling.*
+load ExoCurves.mat
 
 cost=1;
 switch cost
@@ -7,20 +8,20 @@ switch cost
         costdir = 'Exc_Act';
     case 2
         costdir = 'MinAlex';
-    case 3
-        costdir = 'Exc_Act_Hip_Shift';
+    case 3 % Add mass
+        costdir = 'Exc_Act';
 end
 
-load(fullfile(costdir,'ExoCurves.mat'))
-
 cmap = zeros(11,3);
-cmap(1,:) = [1 1 1];
+cmap(1,:) = [0 0 0];
 cmap(2:end,:) = jet(10);
 
 for x=1:11
 
+    % add back 'HipAnkle', before costdir? 
+    
     filename=strcat('forceLevel',int2str(x-1),'.mat');
-    load(fullfile(costdir,filename))
+    load(fullfile('HipAnkle',costdir,filename))
 
     numDOFs = DatStore.nDOF;
     numMuscles = DatStore.nMuscles;
@@ -36,19 +37,37 @@ for x=1:11
     momArmsExp = DatStore.dM;
     momArms = interp1(expTime, momArmsExp, time);
     jointAngles = pi / 180. * interp1(expTime, qExp, time);
-
+    T_exp = DatStore.T_exp;
+    Fopt_exo = DatStore.Fopt_exo;
+    ankleIdx = strcmp('ankle_angle_r',DatStore.DOFNames);
+    anklePeakForce = Fopt_exo(ankleIdx);
+    ankleID = T_exp(:,ankleIdx);
+    hipIdx = strcmp('hip_flexion_r',DatStore.DOFNames);
+    hipPeakForce = Fopt_exo(hipIdx);
+   	hipID = T_exp(:,hipIdx);
+    
+    % Interpolate inverse dynamics moments
+    timeID = linspace(0.6,1.4,length(hipID));
+    hipID = interp1(timeID,hipID,time);
+    ankleID = interp1(timeID,ankleID,time);
+    
     % Extract parts of the solution related to the device.
     control = OptInfo.result.solution.phase.control;
     state = OptInfo.result.solution.phase.state;
 
     % Get controls
-    e       = control(:,1:numMuscles); e(e<0)=0;
+    e       = control(:,1:numMuscles); e(e<0)=0; e(e>1)=1;
     aT      = control(:,numMuscles+1:numMuscles+numDOFs);
-    vMtilde = control(:,numMuscles+numDOFs+1:end);
+    vMtilde = control(:,numMuscles+numDOFs+1:end-1);
+    aD      = control(:,end);
 
     % Get states
     a       = state(:,1:numMuscles);
     lMtilde = state(:,numMuscles+1:end);
+    
+    % Get parameter
+    alpha = OptInfo.result.solution.parameter;
+    tradeoff = auxdata.tradeoff;
 
     % Joint moment breakdown.
     deviceIndices = strmatch('ankle_angle', DatStore.DOFNames);
@@ -65,7 +84,6 @@ for x=1:11
         'psoas_r','omit','omit','peri_r','rect_fem_r','vas_int_r'...
         'med_gas_r','soleus_r','tib_post_r','tib_ant_r'};               
     muscleMap = containers.Map(MuscleNames,MuscleNamesApoorva);
-
     probeSet = modelApoorva.getProbeSet();
     probe = probeSet.get('metabolic_power');
     probeUmberger = Umberger2010MuscleMetabolicsProbe.safeDownCast(probe);
@@ -112,11 +130,28 @@ for x=1:11
             musc_energy_rate(:,m) = heatRates(:,5) * mass;
         end
     end
-
+    
     bodyMass = 75; % kg
     wholebody_energy_rate = nansum(musc_energy_rate,2);
     norm_average_wholebody_energy_rate(x) = mean(wholebody_energy_rate) / bodyMass;
-    
+     
+    % Mass properties of suit
+    if cost==3
+        waist_mass = 4.9+0.433;
+        shank_mass = 0.356;
+        foot_mass = 0.364;
+        
+        % equations from Browning 2007
+        % units are watts/kg
+        waist_cost = (0.045*waist_mass);
+        shank_cost = (0.076*shank_mass);
+        foot_cost = (0.2*foot_mass);
+        device_cost = waist_cost+shank_cost+foot_cost;
+        
+        % calculate new metabolic cost
+        norm_average_wholebody_energy_rate(x) = mean(wholebody_energy_rate) / bodyMass + device_cost;
+    end
+        
     % Muscle activations
     h1 = figure(1);
     for m = 1:numMuscles
@@ -144,8 +179,34 @@ for x=1:11
         hold on
     end
     
-
+    % Device control and tradeoff parameter solution
+    r = 0.1;
+    h4 = figure(4);
+    subplot(2,2,1)
+    bar(x,alpha)
+    hold on
+    title('Tradeoff parameter')
+    axis([0 12 -1 1])
+    
+    subplot(2,2,3)
+    plot(time,aD,'Color',cmap(x,:),'LineWidth',1.5)
+    hold on
+    title('Device control')
+    
+    subplot(2,2,2)
+    plot(time,hipPeakForce*aD*r*(1+tradeoff(hipIdx)*alpha),'Color',cmap(x,:),'LineWidth',1.5)
+    hold on
+    plot(time,hipID,'k--')
+    title('Hip Moment')
+    
+    subplot(2,2,4)
+    plot(time,anklePeakForce*aD*r*(1+tradeoff(ankleIdx)*alpha),'Color',cmap(x,:),'LineWidth',1.5)
+    hold on
+    plot(time,ankleID,'k--')
+    title('Ankle Moment')
 end
+
+folder = [Misc.costfun '_Hip_Shift'];
 
 %% Plot bar graphs
 
@@ -172,92 +233,3 @@ hold off
 ylabel('Change in Metabolic Rate [%]')
 xlabel('Peak Assistive Force [% BW]')
 title('Reduction in Net Metabolic Rate')
-%% Plot all activations
-% 
-% figure;
-% %list of muscle numbers to include
-% muscles=1:24;
-% %these do not have muscle parameters
-% muscles(20)=[];
-% muscles(17)=[];
-% muscles(16)=[];
-% %muscle only crosses knee
-% muscles(9)=[];
-% 
-% p_stance = (time-0.6)./(1.43-0.6);
-% cmap=jet(11);
-% 
-% for i=1:length(muscles)
-%     subplot(5,4,i)
-%     % remove _r and _ from titles
-%     title(strrep(strrep(MuscleNames(muscles(i)),'_r',''),'_',''));
-%     hold on
-%     for j=1:11
-%         plot(p_stance,activations(:,muscles(i),j),'Color',cmap(j,:))
-%     end
-% end
-% 
-% %% Plot hip flexors/extensors activations
-% 
-% figure;
-% title('Hip Muscle Activations')
-% %list of muscle numbers to include
-% muscles=[14,15,19,4];
-% p_stance = (time-0.6)./(1.43-0.6);
-% cmap=jet(11);
-% 
-% for i=1:length(muscles)
-%     subplot(1,4,i)
-%     xlabel('Percent Stance Phase')
-%     if i==1
-%         ylabel('Activation')
-%     end
-%     % remove _r and _ from titles
-%     title(strrep(strrep(MuscleNames(muscles(i)),'_r',''),'_',''));
-%     hold on
-%     for j=1:11
-%         plot(p_stance,activations(:,muscles(i),j),'Color',cmap(j,:))
-%     end
-% end
-% 
-% %% Plot ankle flexors/extensors activations
-% 
-% figure;
-% %list of muscle numbers to include
-% muscles=[21,22,23,24];
-% p_stance = (time-0.6)./(1.43-0.6);
-% cmap=jet(11);
-% 
-% for i=1:length(muscles)
-%     subplot(1,4,i)
-%     xlabel('Percent Stance Phase')
-%     if i==1
-%         ylabel('Activation')
-%     end
-%     % remove _r and _ from titles
-%     title(strrep(strrep(MuscleNames(muscles(i)),'_r',''),'_',''));
-%     hold on
-%     for j=1:11
-%         plot(p_stance,activations(:,muscles(i),j),'Color',cmap(j,:))
-%     end
-% end
-% 
-% %% Plot high power activations
-% 
-% figure;
-% %list of muscle numbers to include
-% muscles=[7,12];
-% p_stance = (time-0.6)./(1.43-0.6);
-% cmap=jet(11);
-% 
-% for i=1:length(muscles)
-%     subplot(1,2,i)
-%     % remove _r and _ from titles
-%     title(strrep(strrep(MuscleNames(muscles(i)),'_r',''),'_',''));
-%     xlabel('Percent Stance Phase')
-%     ylabel('Activation')
-%     hold on
-%     for j=1:11
-%         plot(p_stance,activations(:,muscles(i),j),'Color',cmap(j,:),'LineWidth',1)
-%     end
-% end

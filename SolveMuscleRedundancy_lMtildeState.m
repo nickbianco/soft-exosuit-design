@@ -270,6 +270,9 @@ switch study{2}
     case 'HipExtHipAbd'
         bounds.parameter.lower = -1.0;
         bounds.parameter.upper = 1.0;
+    case 'HipAnkleMass'
+        bounds.parameter.lower = -1.0;
+        bounds.parameter.upper = 1.0;
     otherwise
         % No parameter case
 end
@@ -298,7 +301,7 @@ switch study{2}
     otherwise
         guess.phase.control = [DatStore.SoAct DatStore.SoRAct./150 0.01*ones(N,auxdata.NMuscles)];
 end
-guess.phase.control = [DatStore.SoAct DatStore.SoRAct./150 0.01*ones(N,auxdata.NMuscles) 0.5*ones(N,1)];
+
 guess.phase.state =  [DatStore.SoAct ones(N,auxdata.NMuscles)];
 guess.phase.integral = 0;
 switch study{2}
@@ -307,6 +310,8 @@ switch study{2}
     case 'HipKneeAnkle'
         guess.parameter = 0;
     case 'HipExtHipAbd'
+        guess.parameter = 0;
+    case 'HipAnkleMass'
         guess.parameter = 0;
     otherwise
         % No parameter case
@@ -436,6 +441,37 @@ if strcmp(study{2},'HipExtHipAbd')
     auxdata.tradeoff = DatStore.tradeoff;
 end
 
+% Given one actuator, compare tradeoff between hip flexion and ankle 
+%  plantarflexion assistance with addition of device mass
+if strcmp(study{2},'HipAnkleMass') 
+    
+    % Exosuit moment curves
+    ExoCurves = load('/Examples/SoftExosuitDesign/HipAnkleMass/ExoCurves.mat');
+    exoTime = ExoCurves.time;
+    % Peaks are body mass normalized so multiply by model mass
+    exoAnkleMomentPeaks = ExoCurves.am_peak * Misc.model_mass;
+    exoAnkleNormalizedMoment = ExoCurves.am_norm;
+    exoHipMomentPeaks = ExoCurves.hm_peak * Misc.model_mass;
+    exoHipNormalizedMoment = ExoCurves.hm_norm;
+ 
+    % Interpolate exosuit moments to match data
+    if Misc.exo_force_level    
+        exoAnkleMoment = exoAnkleMomentPeaks(Misc.exo_force_level) * exoAnkleNormalizedMoment;
+        exoHipMoment = exoHipMomentPeaks(Misc.exo_force_level) * exoHipNormalizedMoment;
+        for dof = 1:auxdata.Ndof
+            if strcmp('ankle_angle_r', DatStore.DOFNames{dof})
+                % Negative to match ankle_angle_r coord convention
+                DatStore.T_exo(:,dof) = -interp1(exoTime, exoAnkleMoment, DatStore.time); 
+                DatStore.tradeoff(dof) = -1;
+            elseif strcmp('hip_flexion_r', DatStore.DOFNames{dof})
+                % Positive to match hip_flexion_r coord convention
+                DatStore.T_exo(:,dof) = interp1(exoTime, exoHipMoment, DatStore.time);
+                DatStore.tradeoff(dof) = 1;
+            end
+        end
+    end  
+    auxdata.tradeoff = DatStore.tradeoff;
+end
 
 % Spline structures
 for dof = 1:auxdata.Ndof
