@@ -27,9 +27,9 @@ Misc.DofNames_Input={'ankle_angle_r','knee_angle_r','hip_flexion_r','hip_adducti
 Misc.Loads_path = fullfile(getenv('OPENSIM_HOME'), 'Models', 'Gait2354_Simbody','subject01_walk1_grf.xml');
 
 % Optional Input Arguments
-Misc.costfun = 'Exc_Act';
-Misc.subcase = 'Hip_Shift';
-Misc.study = 'SoftExosuitDesign/Quinlivan2017';
+Misc.costfun = 'Exc_Act_MinAlex';
+%Misc.subcase = 'Hip_Shift';
+Misc.study = 'SoftExosuitDesign/Q2017';
 Misc.model_mass = 75.1646; % kg (Gait2354 mass)
 
 

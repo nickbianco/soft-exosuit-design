@@ -5,7 +5,7 @@ load ExoCurves.mat
 
 study = 'HipAnkle';
 
-cost=1;
+cost=3;
 switch cost
     case 1
         costdir = 'Exc_Act';
@@ -21,7 +21,6 @@ cmap(2:end,:) = jet(10);
 
 % Peak assistive force
 peak_force=am_peak.*(75/.6695);
-
 
 for x=1:11
 

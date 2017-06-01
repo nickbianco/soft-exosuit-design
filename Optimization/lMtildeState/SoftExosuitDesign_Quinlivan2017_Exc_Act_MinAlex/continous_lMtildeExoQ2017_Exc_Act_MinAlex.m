@@ -1,4 +1,4 @@
-function phaseout = continous_lMtildeExoHipAnkleMass_Exc_Act(input)
+function phaseout = continous_lMtildeExoQ2017_Exc_Act_MinAlex(input)
 
 % Get input data
 NMuscles        = input.auxdata.NMuscles;
@@ -18,20 +18,16 @@ vMtilde = input.phase.control(:,NMuscles+Ndof+1:end);
 a       = input.phase.state(:,1:NMuscles);
 lMtilde = input.phase.state(:,NMuscles+1:end);
 
-% Get tradeoff parameter info
-alpha    = input.phase.parameter;
-tradeoff = input.auxdata.tradeoff; 
-
 % PATH CONSTRAINTS
 % Hill-equilibrium constraint
-[Hilldiff, F] = ForceEquilibrium_lMtildeStateExoHipAnkleMass_Exc_Act(a,lMtilde,vMtilde,splinestruct.LMT,params,input.auxdata.Fvparam,input.auxdata.Fpparam,input.auxdata.Faparam);
+[Hilldiff, F] = ForceEq_lMtildeStateExoQ2017_Exc_Act_MinAlex(a,lMtilde,vMtilde,splinestruct.LMT,params,input.auxdata.Fvparam,input.auxdata.Fpparam,input.auxdata.Faparam);
 
 % Moments constraint
 Topt = 150;
 Tdiff = zeros(numColPoints,Ndof);
 for dof = 1:Ndof
     T_exp=splinestruct.ID(:,dof);
-    T_exo=splinestruct.EXO(:,dof).*(1+tradeoff(dof)*alpha);
+    T_exo=splinestruct.EXO(:,dof);
     index_sel=(dof-1)*(NMuscles)+1:(dof-1)*(NMuscles)+NMuscles;
     T_sim=sum(F.*splinestruct.MA(:,index_sel),2) + Topt*aT(:,dof) + T_exo;
     Tdiff(:,dof) =  (T_exp-T_sim);
@@ -52,9 +48,23 @@ dlMtildedt = 10*vMtilde;
 phaseout.dynamics = [dadt dlMtildedt];
 
 % OBJECTIVE FUNCTION
+
+% Calculate metabolic rate from Minetti & Alexander (1997) model
+vmax = params(5,:);  
+Fo = params(1,:);   
+Edot = zeros(numColPoints,NMuscles);
+for m = 1:NMuscles
+    v = vmax(1,m)*vMtilde(:,m);
+    Edot(:,m) = calcMinettiAlexanderProbe(v,vmax(1,m),Fo(1,m),a(:,m));
+end
+
+m = 75;   % kg
+g = 9.81; % m/s^2
+v = 1.2;  % m/s
+
+wCOT = 1/(m*g*v); % Weight by cost of transport
 w1 = 1000;
-w2 = 0.01;
-phaseout.integrand = sum(e.^2,2) + sum(a.^2,2) + w1.*sum(aT.^2,2) + w2*(1+tradeoff(1)*alpha)*0.076 + w2*(1+tradeoff(5)*alpha)*0.2;
+phaseout.integrand = sum(e.^2,2) + sum(a.^2,2) + wCOT.*sum(Edot,2) + w1.*sum(aT.^2,2);
 
 
 

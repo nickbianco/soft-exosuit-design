@@ -1,7 +1,8 @@
 %% Calculate metabolic cost
+clear all; close all; clc;
 import org.opensim.modeling.*
 
-cost=1;
+cost=3;
 switch cost
     case 1
         costdir = 'Exc_Act';
@@ -9,18 +10,24 @@ switch cost
         costdir = 'MinAlex';
     case 3
         costdir = 'Exc_Act_Hip_Shift';
+    case 4
+        costdir = 'Exc_Act_MinAlex';
 end
+
+study = 'Quinlivan2017';
 
 load(fullfile(costdir,'ExoCurves.mat'))
 
 cmap = zeros(11,3);
-cmap(1,:) = [1 1 1];
+cmap(1,:) = [0 0 0];
 cmap(2:end,:) = jet(10);
+
+peak_force=am_peak.*(75/.6695);
 
 for x=1:11
 
     filename=strcat('forceLevel',int2str(x-1),'.mat');
-    load(fullfile(costdir,filename))
+    load(fullfile(study,costdir,filename))
 
     numDOFs = DatStore.nDOF;
     numMuscles = DatStore.nMuscles;
@@ -36,6 +43,8 @@ for x=1:11
     momArmsExp = DatStore.dM;
     momArms = interp1(expTime, momArmsExp, time);
     jointAngles = pi / 180. * interp1(expTime, qExp, time);
+    T_exp = DatStore.T_exp;
+    T_exo = DatStore.T_exo;
 
     % Extract parts of the solution related to the device.
     control = OptInfo.result.solution.phase.control;
@@ -122,8 +131,33 @@ for x=1:11
     for m = 1:numMuscles
         subplot(6,4,m)
         title(MuscleNames(m),'interpreter', 'none')
-        plot(time,a(:,m),'Color',cmap(x,:),'LineWidth',1.2)
+        if x==1
+            plot(time,a(:,m),'k--','LineWidth',1.5)
+        else
+            plot(time,a(:,m),'Color',cmap(x,:),'LineWidth',1.2)
+        end
         hold on
+    end
+    
+    % Desired activations
+    h7 = figure(7);
+    muscles = {'med_gas_r','tib_ant_r','glut_med2_r','add_mag2_r','iliacus_r'};
+    muscleNamesFull = {'Medial Gastrocnemius','Tibalis Anterior', ...
+                       'Gluteus Medius','Adductor Magnus','Iliacus'};
+    for i = 1:length(muscles)
+        for m = 1:numMuscles
+            if strcmp(muscles{i},MuscleNames(m))
+                subplot(5,1,i)
+                %ylabel(muscleNamesFull(i),'FontAngle','italic')
+                hold on
+                if x==1
+                    plot(time,a(:,m),'k--','LineWidth',1.5)
+                else
+                    plot(time,a(:,m),'Color',cmap(x,:),'LineWidth',1.2)
+                end
+                axis([0.6 1.4 0 1])
+            end
+        end
     end
     
     % Normalized fiber length
@@ -144,7 +178,35 @@ for x=1:11
         hold on
     end
     
-
+    h4 = figure(4);
+    if x>1
+        subplot(2,1,1)
+        if x==2
+            plot(expTime,T_exp(:,1),'k-','LineWidth',1.75)
+        end
+        hold on
+        plot(expTime,T_exo(:,1),'Color',cmap(x,:),'LineWidth',1.5)
+        hold on
+        title('Hip Moment','FontAngle','italic')
+        box on
+        ax = gca;
+        ax.LineWidth = 1.5;
+        ax.FontSize = 14;
+        
+        subplot(2,1,2)
+        if x==2
+            plot(expTime,T_exp(:,5),'k-','LineWidth',1.75)
+        end
+        hold on
+        plot(expTime,T_exo(:,5),'Color',cmap(x,:),'LineWidth',1.5)
+        hold on
+        title('Ankle Moment','FontAngle','italic')
+        box on
+        ax = gca;
+        ax.LineWidth = 1.5;
+        ax.FontSize = 14;
+    end
+    
 end
 
 %% Plot bar graphs
@@ -156,22 +218,27 @@ end
 
 figure;
 paper_results=[-3.59,-6.45,-14.79,-22.83];
-color=[[0.498, 0.396, 0.635];[0.258, 0.670, 0.784];[0.596, 0.8, 0.403];[0.968, 0.6, 0.215]];
-ind=am_peak.*(75/.6695);
 
 hold on
 for i = 1:length(paper_results)
-    h=bar(ind(i),paper_results(i));
-    set(h,'FaceColor',color(i,:));
+    h=bar(peak_force(i),paper_results(i));
+    set(h,'FaceColor',[1 1 1]);
     set(h,'BarWidth',10);
+    set(h,'LineWidth',1.5);
 end
 
-plot(ind,p_change,'k--')
-plot(ind,p_change,'k.','MarkerSize',15)
+plot(peak_force,p_change,'k--','LineWidth',1.5)
+box on
+for i = 1:length(p_change)
+    plot(peak_force(i),p_change(i),'o','MarkerSize',10,'MarkerEdgeColor',cmap(i+1,:),'MarkerFaceColor',cmap(i+1,:))
+end
+
 hold off
 ylabel('Change in Metabolic Rate [%]')
 xlabel('Peak Assistive Force [% BW]')
-title('Reduction in Net Metabolic Rate')
+ax = gca;
+ax.LineWidth = 1.5;
+ax.FontSize = 14;
 %% Plot all activations
 % 
 % figure;

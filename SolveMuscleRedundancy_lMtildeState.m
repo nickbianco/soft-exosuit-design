@@ -328,7 +328,8 @@ DatStore.Fopt_exo_knee = zeros(auxdata.Ndof,1);
 DatStore.tradeoff = zeros(auxdata.Ndof,1);
 
 % Reproduce Quinlivan et al. 2017 study
-if strcmp(study{2},'Quinlivan2017')
+if strcmp(study{2},'Quinlivan2017') || strcmp(study{2},'Q2017')
+    disp('debug')
     % Exosuit moment curves
     ExoCurves = load(['/Examples/SoftExosuitDesign/Quinlivan2017/' folder '/ExoCurves.mat']);
     exoTime = ExoCurves.time;

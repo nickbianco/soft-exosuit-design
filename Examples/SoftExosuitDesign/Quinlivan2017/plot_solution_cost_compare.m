@@ -1,28 +1,27 @@
 %% Calculate metabolic cost
+clear all; close all; clc;
 import org.opensim.modeling.*
 load ExoCurves.mat
 
-cost=1;
-switch cost
-    case 1
-        costdir = 'Exc_Act';
-    case 2
-        costdir = 'MinAlex';
-    case 3 % Add mass
-        costdir = 'Exc_Act';
-end
+study = 'Quinlivan2017';
 
 cmap = zeros(11,3);
 cmap(1,:) = [0 0 0];
 cmap(2:end,:) = jet(10);
 
+% Peak assistive force
+peak_force=am_peak.*(75/.6695);
+
+costdir = {'Exc_Act','Exc_Act_Hip_Shift'};
+h5 = figure('units','normalized','position',[0 0 0.5 1.0]);
+
+for dir = 1:length(costdir)
+
 for x=1:11
 
-    % add back 'HipAnkle', before costdir? 
-    
     filename=strcat('forceLevel',int2str(x-1),'.mat');
-    load(fullfile(costdir,'Hip_Ankle_w2_0.01',filename))
-    
+    load(fullfile(study,costdir{dir},filename))
+
     numDOFs = DatStore.nDOF;
     numMuscles = DatStore.nMuscles;
 
@@ -38,18 +37,18 @@ for x=1:11
     momArms = interp1(expTime, momArmsExp, time);
     jointAngles = pi / 180. * interp1(expTime, qExp, time);
     T_exp = DatStore.T_exp;
-    Fopt_exo = DatStore.Fopt_exo;
-    ankleIdx = strcmp('ankle_angle_r',DatStore.DOFNames);
-    anklePeakForce = Fopt_exo(ankleIdx);
-    ankleID = T_exp(:,ankleIdx);
-    hipIdx = strcmp('hip_flexion_r',DatStore.DOFNames);
-    hipPeakForce = Fopt_exo(hipIdx);
-   	hipID = T_exp(:,hipIdx);
+%     Fopt_exo = DatStore.Fopt_exo;
+%     ankleIdx = strcmp('ankle_angle_r',DatStore.DOFNames);
+%     anklePeakForce = Fopt_exo(ankleIdx);
+%     ankleID = T_exp(:,ankleIdx);
+%     hipIdx = strcmp('hip_flexion_r',DatStore.DOFNames);
+%     hipPeakForce = Fopt_exo(hipIdx);
+%    	hipID = T_exp(:,hipIdx);
     
     % Interpolate inverse dynamics moments
-    timeID = linspace(0.6,1.4,length(hipID));
-    hipID = interp1(timeID,hipID,time);
-    ankleID = interp1(timeID,ankleID,time);
+%     timeID = linspace(0.6,1.4,length(hipID));
+%     hipID = interp1(timeID,hipID,time);
+%     ankleID = interp1(timeID,ankleID,time);
     
     % Extract parts of the solution related to the device.
     control = OptInfo.result.solution.phase.control;
@@ -63,10 +62,6 @@ for x=1:11
     % Get states
     a       = state(:,1:numMuscles);
     lMtilde = state(:,numMuscles+1:end);
-    
-    % Get parameter
-    alpha = OptInfo.result.solution.parameter;
-    tradeoff = auxdata.tradeoff;
 
     % Joint moment breakdown.
     deviceIndices = strmatch('ankle_angle', DatStore.DOFNames);
@@ -129,80 +124,14 @@ for x=1:11
             musc_energy_rate(:,m) = heatRates(:,5) * mass;
         end
     end
-    
+
     bodyMass = 75; % kg
     wholebody_energy_rate = nansum(musc_energy_rate,2);
     norm_average_wholebody_energy_rate(x) = mean(wholebody_energy_rate) / bodyMass;
-     
-    % Mass properties of suit
-    if cost==3
-        waist_mass = 4.9+0.433;
-        shank_mass = 0.356;
-        foot_mass = 0.364;
-        
-        % equations from Browning 2007
-        % units are watts/kg
-        waist_cost = (0.045*waist_mass);
-        shank_cost = (0.076*shank_mass);
-        foot_cost = (0.2*foot_mass);
-        device_cost = waist_cost+shank_cost+foot_cost;
-        
-        % calculate new metabolic cost
-        norm_average_wholebody_energy_rate(x) = mean(wholebody_energy_rate) / bodyMass + device_cost;
-    end
-        
-    % Muscle activations
-    h1 = figure(1);
-    for m = 1:numMuscles
-        subplot(6,4,m)
-        title(MuscleNames(m),'interpreter', 'none')
-        plot(time,a(:,m),'Color',cmap(x,:),'LineWidth',1.2)
-        hold on
-    end
     
-    % Normalized fiber length
-    h2 = figure(2);
-    for m = 1:numMuscles
-        subplot(6,4,m)
-        title(MuscleNames(m),'interpreter', 'none')
-        plot(time,lMtilde(:,m),'Color',cmap(x,:),'LineWidth',1.2)
-        hold on
-    end
-    
-    % Normalized fiber velocity
-    h3 = figure(3);
-    for m = 1:numMuscles
-        subplot(6,4,m)
-        title(MuscleNames(m),'interpreter', 'none')
-        plot(time,vMtilde(:,m),'Color',cmap(x,:),'LineWidth',1.2)
-        hold on
-    end
-    
-    % Device control and tradeoff parameter solution
-    r = 0.1;
-    h4 = figure(4);
-    bar(x,alpha)
-    hold on
-    title('Tradeoff parameter')
-    axis([0 12 -1 1])
-    
-%     subplot(2,2,3)
-%     plot(time,aD,'Color',cmap(x,:),'LineWidth',1.5)
-%     hold on
-%     title('Device control')
-    
-%     subplot(2,2,2)
-%     plot(time,hipPeakForce*aD*r*(1+tradeoff(hipIdx)*alpha),'Color',cmap(x,:),'LineWidth',1.5)
-%     hold on
-%     plot(time,hipID,'k--')
-%     title('Hip Moment')
-%     
-%     subplot(2,2,4)
-%     plot(time,anklePeakForce*aD*r*(1+tradeoff(ankleIdx)*alpha),'Color',cmap(x,:),'LineWidth',1.5)
-%     hold on
-%     plot(time,ankleID,'k--')
-%     title('Ankle Moment')
 end
+
+
 
 folder = [Misc.costfun '_Hip_Shift'];
 
@@ -213,21 +142,47 @@ for i=1:length(norm_average_wholebody_energy_rate)-1
     norm_average_wholebody_energy_rate(1))/norm_average_wholebody_energy_rate(1)*100;
 end
 
-figure;
-paper_results=[-3.59,-6.45,-14.79,-22.83];
-color=[[0.498, 0.396, 0.635];[0.258, 0.670, 0.784];[0.596, 0.8, 0.403];[0.968, 0.6, 0.215]];
-ind=am_peak.*(75/.6695);
+
+
 
 hold on
-for i = 1:length(paper_results)
-    h=bar(ind(i),paper_results(i));
-    set(h,'FaceColor',color(i,:));
-    set(h,'BarWidth',10);
+if dir==1
+    paper_results=[-3.59,-6.45,-14.79,-22.83];
+    for i = 1:length(paper_results)
+        h=bar(peak_force(i),paper_results(i));
+        set(h,'FaceColor',[1 1 1]);
+        set(h,'BarWidth',10);
+        set(h,'LineWidth',1.5);
+    end
 end
 
-plot(ind,p_change,'k--')
-plot(ind,p_change,'k.','MarkerSize',15)
-hold off
+plot(peak_force,p_change,'k--','LineWidth',1.5)
+box on
+switch costdir{dir}
+    case 'Exc_Act'
+        for i = 1:length(p_change)
+            plot(peak_force(i),p_change(i),'o','MarkerSize',10,'MarkerEdgeColor',cmap(i+1,:),'MarkerFaceColor',cmap(i+1,:))
+        end
+    case 'MinAlex'
+        for i = 1:length(p_change)
+            plot(peak_force(i),p_change(i),'s','MarkerSize',10,'MarkerEdgeColor',cmap(i+1,:),'MarkerFaceColor',cmap(i+1,:))
+        end
+    case 'Exc_Act_Hip_Shift'
+        for i = 1:length(p_change)
+            plot(peak_force(i),p_change(i),'^','MarkerSize',10,'MarkerEdgeColor',cmap(i+1,:),'MarkerFaceColor',cmap(i+1,:))
+        end
+end
+
+
+hold on
 ylabel('Change in Metabolic Rate [%]')
 xlabel('Peak Assistive Force [% BW]')
-title('Reduction in Net Metabolic Rate')
+ax = gca;
+ax.LineWidth = 1.5;
+ax.FontSize = 14;
+
+end
+
+
+
+
