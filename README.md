@@ -1,38 +1,11 @@
-# optctrlmuscle
+# soft_exosuit_design
 Optimal control approach to solving the muscle redundancy problem. Code expanded
 on from the original SimTK project by Freidl De Groote, B.J. Fregly, Antoine
 Falisse, and Maarten Afschrift (located here: https://simtk.org/projects/optcntrlmuscle.) 
 Additional software required as described in the included Manual. For a more detailed
 description of the general problem being solved, please refer to the associated paper:
 
-[1] F. De Groote, A. L. Kinney, A. V. Rao, and B.J. Fregly, "Evaluation of Direct Collocation 
-		Optimal Control Problem Formulations for Solving the Muscle Redundancy Problem," Annals 
-		of Biomedical Engineering, 2016, DOI: 10.1007/s10439-016-1591-9
-
-Branches
-========
-
-# master
-Authors: Chris Dembia, Nick Bianco
-
-Contains the base code from the original SimTK project and any relevant updates or 
-improvements that benefit all subprojects. Subprojects exist as branches off of the
-master branch (e.g. ankle_clutched_spring, soft_exosuit_design).
-
-# soft_exosuit_design
-Authors: Nick Bianco, Rachel Troutman
-
-References:
-
-[2] B.T. Quinlivan et al., "Assistance magnitude versus metabolic cost reductions for a
-		tethered multiarticular soft exosuit," Science Robotics, 2017, Vol. 2, eaah4416
-
-[3] R.C. Browning et al., "The Effects of Adding Mass to the Legs on the Energetics and 
-		Biomechanics of Walking," Medicine & Science in Sports & Exercise, 2007
-		DOI: 10.1249/mss.0b013e31802b3562
-
-[4] A.E. Minetti and R. McN. Alexander, "A Theory of Metabolic Costs for Bipedal Gaits,"
-		Journal of Theoretical Biology, 1997, Vol. 186, pgs. 467-476
+Authors: Nick Bianco, Rachel Troutman, Chris Dembia
 
 All examples within the Examples/SoftExosuitDesign subdirectory were created for the 
 Stanford course ME485: Modeling and Simulation of Human Movement. A webpage containing
@@ -109,3 +82,19 @@ we modified the inverse dynamics moment tracking constraint (see the PATH CONSTR
 in each continous function file). The endpoint function defines any endpoints contraints 
 or bounds, including initial or final state values or periodicity. For more details on 
 continous and endpoint functions in general, please refer to the GPOPS-II instruction manual.
+
+References:
+
+[1] F. De Groote, A. L. Kinney, A. V. Rao, and B.J. Fregly, "Evaluation of Direct Collocation 
+		Optimal Control Problem Formulations for Solving the Muscle Redundancy Problem," Annals 
+		of Biomedical Engineering, 2016, DOI: 10.1007/s10439-016-1591-9
+
+[2] B.T. Quinlivan et al., "Assistance magnitude versus metabolic cost reductions for a
+		tethered multiarticular soft exosuit," Science Robotics, 2017, Vol. 2, eaah4416
+
+[3] R.C. Browning et al., "The Effects of Adding Mass to the Legs on the Energetics and 
+		Biomechanics of Walking," Medicine & Science in Sports & Exercise, 2007
+		DOI: 10.1249/mss.0b013e31802b3562
+
+[4] A.E. Minetti and R. McN. Alexander, "A Theory of Metabolic Costs for Bipedal Gaits,"
+		Journal of Theoretical Biology, 1997, Vol. 186, pgs. 467-476
